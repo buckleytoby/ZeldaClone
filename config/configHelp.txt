@@ -2,10 +2,10 @@
 filename
 
 [mobs]
-player
+Player
 x
 y
-soldier
+Soldier
 x
 y
 [end]

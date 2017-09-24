@@ -17,12 +17,22 @@ class ClassHolder(object):
     self.physicsClass = Physics()
     # game objects dict
     self.gameObjects = {}
-    # load config
-    self.loadConfigFile()
+    self.gameObjectsARR = []
+    #factories
+    soldierFactory = SoldierFactory()
+    # group the factories
+    self.factories = {'Soldier': soldierFactory,
+                 'Player':  soldierFactory}
+
     
     
   def writeScreen(self):
-    self.mapClass.writeScreen(self.gameObjects)
+    screenLocation = self.playerClass.screenClass.getLocation()
+    self.worldClass.writeScreen(self.gameObjects, self.gameObjectsARR, screenLocation)
+    
+  def addGameObject(self, x, y, object):
+    self.gameObjects[object.id] = object
+    self.gameObjectsARR[int(x)][int(y)].append(object.id)
     
   def loadConfigFile(self):
     g=[]
@@ -37,18 +47,7 @@ class ClassHolder(object):
           f=g[-1]
         else:
           break
-      elif line == '[mobs]':
-        while line != '[end]':
-          if line == 'player':
-            x = float(f.parse_lines())
-            y = float(f.parse_lines())
-            self.playerClass.gameObject = soldierFactory.create(x, y)
-          elif line == 'soldier':
-            x = float(f.parse_lines())
-            y = float(f.parse_lines())
-            self.mobs.append( soldierFactory.create(x, y) )
-          
-          line = f.parse_lines()
+      
         
       elif line == '[INCL]':
         line=f.parse_lines()
@@ -62,60 +61,63 @@ class ClassHolder(object):
         if type == 'gameObjects':
           fileName = f.parse_lines()
           #height = 
-          self.worldClass.loadGameObjects(fileName, f)
+          self.worldClass.loadGameObjects(fileName, f, self.factories)
       
         elif type == 'tiles':
           line=f.parse_lines()
           self.worldClass.loadTiles(line, 16, 16)
             
           
-      elif line == '[header]':
-        width = int(f.parse_lines()[6:])
-        height = int(f.parse_lines()[7:])
-        self.mapClass.init(width, height)
+      elif line == '[header]': #this always comes before [layers]
+        mapWidth = int(f.parse_lines()[6:])
+        mapHeight = int(f.parse_lines()[7:])
         
+      elif line == '[mobs]':
+        while line != '[end]':
+          if line in factory:
+            factory = self.factories[line]
+            x = float(f.parse_lines())
+            y = float(f.parse_lines())
+            object = factory.create(x, y)
+            self.addGameObject( object )
+            if line == 'Player':
+                self.playerClass.setGameObject(x, y, object)
+          
+          line = f.parse_lines()
+          
       elif line == '[layer]':
         line=f.parse_lines()
-        type = line.split('=')[1] #get the word after '='
+        mapType = line.split('=')[1] #get the word after '='
         f.parse_lines()
-        mapMatrix = np.empty((width, height), dtype='int') #syntax is wrong
-        for j in range(0, height):
-          dlist=parse_data(f.parse_lines())
-          for i in range(0, width):
-            mapMatrix[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
-        self.mapclass.setMap(type, mapMatrix)
         
-        
-        
-        
-        if type == 'staticObjects':
-          f.parse_lines()
-          for j in range(0,int1):
+        if mapType != 'gameObjects':
+          mapMatrix = np.empty((mapWidth, mapHeight), dtype='int')
+          for j in range(0, mapHeight):
             dlist=parse_data(f.parse_lines())
-            for i in range(0,int0):
-              class1.statmap[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
-        
-        elif type == 'gameObjects':
-          f.parse_lines()
-          for j in range(0, height):
+            for i in range(0, mapWidth):
+              mapMatrix[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
+          self.worldClass.setMap(mapType, mapMatrix)
+        elif mapType == 'gameObjects':
+          self.gameObjectsARR = [[[] for y in range(mapHeight)] for x in range(mapWidth)]
+          for y in range(0, mapHeight):
             dlist=parse_data(f.parse_lines())
-            for i in range(0, width):
-              objtype=int(dlist[i])-1
-              if objtype==-1:
+            for x in range(0, mapWidth):
+              try:
+                objInd = int(dlist[x])-1
+              except:
+                pdb.set_trace()
+              if objInd == -1:
                 continue
-              #instantiate mobs
-              if objtype==0: #player
-                x = float(i)
-                y = float(j)
-                self.playerClass.gameObject = soldierFactory.create(x, y)
-                self.playerClass.gameObject.objectType = 'Player'
-                mob = playerclass
-                
-              if objtype==1: #soldier
-                x = float(i)
-                y = float(j)
-                mob = soldierFactory.create(x, y)
-              self.mobs[mob.id]=mob
+              if objInd == 0:
+                objType = 'Player'
+              elif objInd == 1:
+                objType = 'Soldier'
+              #instantiate game object
+              factory = self.factories[objType]
+              object = factory.create(x, y)
+              self.addGameObject( x, y, object )
+              if objType == 'Player':
+                self.playerClass.setGameObject(object)
               
       #restart loop, get next line
       line=f.parse_lines()

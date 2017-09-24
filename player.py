@@ -1,7 +1,22 @@
 
 from config       import *
+from AI           import *
 
 
+class Screen(object):
+  #class to deal with screen-scrolling n shit
+  def __init__(self):
+    self.screenLocationX = 0.0
+    self.screenLocationY = 0.0
+    self.offsetX = -1.0 * screenTileWidth / 2.0
+    self.offsetY = -1.0 * screenTileHeight / 2.0
+  
+  def update(self, x, y):
+    self.screenLocationX = x + self.offsetX
+    self.screenLocationY = y + self.offsetY
+  
+  def getLocation(self):
+    return (self.screenLocationX, self.screenLocationY)
 
 class Keyboard(object):
   #specify conversion from keyboard event to player action
@@ -15,22 +30,36 @@ class Keyboard(object):
                         pygame.QUIT:     'exit',
                         pygame.K_e:      'edit'}
 
-  def getAction(key):
-    if event.key in self.keyboard.convertDict:
+  def getAction(self, key):
+    if key in self.convertDict:
+      print(self.convertDict[key])
       return self.convertDict[key]
     else:
       return ''
+      
+  def getRealTimeAction(self, status):
+    actions = []
+    for key in self.convertDict:
+      if status[key]: actions.append(self.convertDict[key])
+    return actions
 
 class Player(object):
   def __init__(self):
     #default values
     self.gameObject = None
+    self.screenClass = Screen()
     self.keyboard = Keyboard()
+    
+  def setGameObject(self, object):
+    self.gameObject = object
+    self.gameObject.objectType = 'Player'
+    self.gameObject.spriteType = 'Player'
+    self.gameObject.AI = self
     
   def update(self, events):
     #convert keyboard+mouse events into actions
-    actions = []
     dx = 0; dy = 0
+    actions = []
     for event in events:
       if event.type==pygame.KEYDOWN:
         action = self.keyboard.getAction(event.key)
@@ -41,16 +70,19 @@ class Player(object):
         if action is 'edit':
           #turn on edit mode
           print('edit mode')
-        if action is 'left':  dx -= 1
-        if action is 'right': dx += 1
-        if action is 'up':    dy -= 1
-        if action is 'down':  dy += 1
-          
-            
+        
       elif event.type==pygame.QUIT: sys.exit()
+    # real-time events
+    status = pygame.key.get_pressed()
+    realTimeActions = self.keyboard.getRealTimeAction(status)
+    for realTimeActions in realTimeActions:
+      if realTimeActions is 'left':  dx -= 1
+      if realTimeActions is 'right': dx += 1
+      if realTimeActions is 'up':    dy -= 1
+      if realTimeActions is 'down':  dy += 1
       
-    dx *= round(self.gameObject.velocity*self.dt)
-    dy *= round(self.gameObject.velocity*self.dt)
+    dx *= round(self.gameObject.velocity)
+    dy *= round(self.gameObject.velocity)
     if abs(dx) == abs(dy) == 1: #moving diagonally
       dx *= 0.707106
       dy *= 0.707106
@@ -59,8 +91,11 @@ class Player(object):
     self.dt = 0
     
     
-    self.animationClass.updateSprite(dx, dy)
+    self.screenClass.update(self.gameObject.x, self.gameObject.y)
     return actions
+    
+  def getAction(self):
+    return (self.dx, self.dy)
     
     
     

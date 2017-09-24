@@ -6,8 +6,8 @@ art\tiles.png
 [source]
 type=gameObjects
 art\gameObjects.png
-player
-soldier
+Player
+Soldier
 
 
 

@@ -7,6 +7,7 @@ from player       import *
 from gameObjects  import *
 from physics      import *
 from classHolder  import *
+from AI           import *
 
     
     
@@ -20,10 +21,14 @@ class MasterClass(object):
     config = r'config\title.txt'
     self.title = ClassHolder(config)
     self.title.worldClass = TitleScreen()
+    # load config
+    self.title.loadConfigFile()
     
     # main game
     config = r'config\main.txt'
     self.main = ClassHolder(config)
+    # load config
+    self.main.loadConfigFile()
     
     # group all holders
     self.holders = [self.title,
@@ -34,7 +39,7 @@ class MasterClass(object):
       
   def update(self, seconds, events):
     actions = self.holder.playerClass.update(events)
-    self.holder.physicsClass.update(seconds)
+    self.holder.physicsClass.update(seconds, self.holder.gameObjects)
     
     # check for high-level player actions
     if 'interact' in actions and self.holder == self.title:
@@ -50,12 +55,6 @@ class MasterClass(object):
 
 
 
-#factories
-soldierFactory = SoldierFactory()
-
-# group the factories
-factories = {'Soldier': soldierFactory,
-             'Player':  soldierFactory]
 
 clock=pygame.time.Clock()
 FPS=30
@@ -69,9 +68,10 @@ pygame.init()
 #pygame.display.set_icon(logo)
 pygame.display.set_caption('Ephiro') #Eponymous Hero -> EpHero -> Ephiro
 screen=pygame.display.set_mode(scrsize)
+World.screen = screen
 
 # instantiate starting classes
-master = MasterClass(screen, factories)
+master = MasterClass(screen)
 
 ipics=0
 

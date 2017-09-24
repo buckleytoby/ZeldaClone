@@ -3,24 +3,19 @@ from config       import *
 
 
 
-class ObjectArt(object):
-  left = 0
-  down = 1
-  right = 2
-  up = 3
+class ObjectArt(object): #procedure: get sprite index from gameObject.animation.getSpriteIndex(), then get the sprite with this class
   def __init__(self):
-    self.sprites = []
+    self.data = []
     
   def clear(self):
-    for i in range(len(self.sprites)): del self.sprites[i][:]
+    del self.data[:]
     
   def setData(self, data):
-    del self.data[:]
+    self.clear
     self.data = data
     
-    
   def getSprite(self, spriteIndx):
-    return self.sprites[spriteIndx]
+    return self.data[spriteIndx]
 
 
 class TileArt(object):
@@ -36,9 +31,13 @@ class Map(object):
   def __init__(self):
     self.invisible = False
     self.tileData = []
-    self.gameObjectData = []
-    self.gameObjects
+    #self.gameObjectData = []
+    #self.gameObjects = None
 
+  def setTileData(self, data):
+    self.tileData = data
+    self.numTilesWidth  = data.shape[0]
+    self.numTilesHeight = data.shape[1]
 
 class World(object):
   #class for the map
@@ -49,7 +48,7 @@ class World(object):
     World.count += 1
     self.id = World.count
     self.screenloc=[0,0,0,0] #screen location [tilew,tileh,pixel offsetx, pixel offset y]
-    self.maps = {}
+    self.maps = defaultdict(Map)
     self.mapParents = {}
     self.tileArt = TileArt()
     self.objectArts = {}
@@ -70,7 +69,7 @@ class World(object):
         tile = pygame.transform.scale(tile,(pixelsPerTileWidth,pixelsPerTileHeight))
         self.tileArt.addTile(tile)
         
-  def loadGameObjects(self, imagefile, f): #height/width of tiles
+  def loadGameObjects(self, imagefile, f, factories): #height/width of tiles
     #reads in image, resets, fills with sprites
     # input: 'f' is the file object which specifies names of game objects
     self.objectArts.clear()
@@ -87,37 +86,38 @@ class World(object):
       objectType = f.parse_lines()
       self.objectArts[objectType] = ObjectArt()
       spriteRow=[]
-      pixelWidth = exec(objectType+'Factory').values['pixelWidth']
-      pixelHeight = exec(objectType+'Factory').values['pixelHeight']
-      tileWidth = exec(objectType+'Factory').values['tileWidth']
-      tileHeight = exec(objectType+'Factory').values['tileHeight']
+      pixelWidth  = factories[objectType].values['pixelWidth']
+      pixelHeight = factories[objectType].values['pixelHeight']
+      tileWidth   = factories[objectType].values['width']
+      tileHeight  = factories[objectType].values['height']
       tiley = 0
       while tiley*pixelHeight < imgh:
         rect=(tilex*pixelWidth, tiley*pixelHeight, pixelWidth, pixelHeight)
         tile = image.subsurface(rect)
-        tile = pygame.transform.scale(tile,(tileWidth*pixelsPerTileWidth, tileHeight*pixelsPerTileHeight))
+        tile = pygame.transform.scale(tile,(int(tileWidth*pixelsPerTileWidth), 
+                int(tileHeight*pixelsPerTileHeight)))
         spriteRow.append(tile)
         tiley += 1
       tilex += 1 
       pixelCount += pixelWidth
-      self.objectArts[objectType].addSpriteRow(spriteRow)
+      self.objectArts[objectType].setData(spriteRow)
     
   def setMap(self, mapType, data):
     #require all maps to be numpy arrays
-    self.maps[mapType].data = data #think I have to copy
+    self.maps[mapType].setTileData(data) #think I have to copy
     
   def setParent(self, mapType, parentType):
     self.mapParents[mapType] = parentType
     
   def getTile(self, mapType, indices):
     i, j = indices
-    tileValue = self.maps[mapType][i][j]
+    tileValue = self.maps[mapType].tileData[i][j]
     return self.tileArt.data[tileValue]
     
-  def convertTileToPixel(self, pos_tile): #offset backwards so that it'll appear correct ????????????
+  def convertTileToPixel(self, indices): #offset backwards so that it'll appear correct ????????????
     pos_tile = np.array(indices, dtype='float')
     factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
-    pos_pixel = np.mult([pos_tile, factor]) #check syntax
+    pos_pixel = np.multiply(pos_tile, factor) #check syntax
     return pos_pixel.tolist()
     
     
@@ -148,20 +148,19 @@ class World(object):
     self.mobstatnbors[(width,height)]=genstatnbors(cost)
   
   
-  def resetDrawnStatus(self, gameObjectsMap, indices):
+  def resetDrawnStatus(self, gameObjects, gameObjectsMap, indices):
     maxIDX_x, maxIDX_y = indices
     for i in range(self.screenLocationX, maxIDX_x):
       for j in range(self.screenLocationY, maxIDX_y):
-        for gameObjectType in gameObjectsMap[i][j]:
-          gameObject = gameObjects[gameObjectType]
+        for gameObjectID in gameObjectsMap[i][j]:
+          gameObject = gameObjects[gameObjectID]
           if gameObject.hasSprite: gameObject.drawn = False
   
 
   
-  def writeScreen(self, gameObjects):
-    isDrawn = defaultDict(False)
-    for mapType in self.maps:
-      recurse(mapType)
+  def writeScreen(self, gameObjects, gameObjectsARR, screenLocation):
+    self.screenLocationX = int(screenLocation[0])
+    self.screenLocationY = int(screenLocation[1])
     
     def recurse(mapType): #must check ability to change isDrawn in nested function, it's bit me before
       if isDrawn[mapType]: #all parents are drawn too, then
@@ -173,46 +172,51 @@ class World(object):
       isDrawn[mapType] = True
       if self.maps[mapType].invisible: return
       self.drawMap(mapType)
-      self.drawGameObjects(mapType)
+      self.drawGameObjects(gameObjects, gameObjectsARR)
+      
+    isDrawn = defaultdict(bool)
+    for mapType in self.maps:
+      recurse(mapType)
     
   
   def drawMap(self, mapType):
-    map = self.maps[mapType].tileData
-    mapLenX, mapLenY = map.shape
+    mapARR = self.maps[mapType].tileData
+    mapLenX, mapLenY = mapARR.shape
     #restrict screen to map-bounds
-    maxIDX_x = min([mapLenX, self.screenLocationX+numTilesWidth+1])
-    maxIDX_y = min([mapLenY, self.screenLocationY+numTilesHeight+1])
+    maxIDX_x = min([mapLenX, self.screenLocationX+screenTileWidth+1])
+    maxIDX_y = min([mapLenY, self.screenLocationY+screenTileHeight+1])
     
     #offset backwards so that it'll appear correct
     for i in range(self.screenLocationX, maxIDX_x):
       for j in range(self.screenLocationY, maxIDX_y):
-        if map[i][j] == -1 or map[i][j] == 19:
+        if mapARR[i][j] == -1 or mapARR[i][j] == 19:
           continue
         xpixel, ypixel = self.convertTileToPixel((i, j))
         tile = self.getTile(mapType, (i, j))
-        screen.blit(tile, (xpixel, ypixel))
+        World.screen.blit(tile, (xpixel, ypixel))
         
-def drawGameObjects(self, mapType):
-    gameObjectsMap = self.maps[mapType].gameObjectData
+  def drawGameObjects(self, gameObjects, gameObjectsARR): #right now this could be pulled up into classHolder ...
+    mapLenX = len(gameObjectsARR)
+    mapLenY = len(gameObjectsARR[0])
     #setting map bounds for mobs
-    maxIDX_x = min([mapLenX, self.screenLocationX+numTilesWidth+1])
-    maxIDX_y = min([mapLenY, self.screenLocationY+numTilesHeight+1])
+    maxIDX_x = min([mapLenX, self.screenLocationX+screenTileWidth+1])
+    maxIDX_y = min([mapLenY, self.screenLocationY+screenTileHeight+1])
       
     #reset drawn status for each mob in frame
-    self.resetDrawnStatus(gameObjectsMap, (maxIDX_x, maxIDX_y))
+    self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
           
     #moving objects -- reverse order so that overlapping mobs are drawn correctly
     for j in range(self.screenLocationY, maxIDX_y):
       for i in range(self.screenLocationX, maxIDX_x):
-        for gameObjectType in gameObjectsMap[i][j]:
-          gameObject = gameObjects[gameObjectType]
+        for gameObjectID in gameObjectsARR[i][j]:
+          gameObject = gameObjects[gameObjectID]
           if gameObject.hasSprite and gameObject.drawn == False:
             xpixel, ypixel = gameObject.getArtPosition_pixels()
             
-            objectType = gameObject.objectType
-            spriteIndex = gameObject.artClass.getSpriteIndex()
-            sprite = self.objectArts[objectType].getSprite(spriteIndex)
-            screen.blit(sprite, (xpixel, ypixel))
+            spriteType = gameObject.spriteType
+            spriteIndex = gameObject.animation.getSpriteIndex()
+            sprite = self.objectArts[spriteType].getSprite(spriteIndex)
+            World.screen.blit(sprite, (xpixel, ypixel))
             gameObject.drawn = True
       
       
@@ -224,14 +228,14 @@ class TitleScreen(World):
   #class for title screen
   
   def __init__(self):
-    super(World).__init__() #something like this, I can't remember
+    super().__init__()
     
     
     
     
-  def writeScreen(self):
-    #
-    pass
+  #def writeScreen(self):
+  #  #
+  #  pass
     
     
     
