@@ -1,0 +1,12 @@
+[INCL]
+filename
+
+[mobs]
+player
+x
+y
+soldier
+x
+y
+[end]
+
