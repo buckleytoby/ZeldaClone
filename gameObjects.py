@@ -37,11 +37,16 @@ class SoldierFactory(GameObjectFactory):
     self.values['height'] = 3.0
     self.values['pixelWidth'] = 16
     self.values['pixelHeight'] = 24
-    self.values['velocity'] = 5.0 #m/s
+    self.values['velocity'] = 13.0 #m/s
     self.values['objectType'] = 'Soldier'
+    self.values['attack'] = self.attack
+
   
   def create(self, x, y):
     object = super().create(x, y)
+    # callbacks
+    getattr(object, 'callbacks')['attack'] = self.attack #unbound, but should be ok
+    # setup
     object.setSpriteStatus(True, 'Soldier')
     return object
 
@@ -112,6 +117,7 @@ class GameObject(object):
     self.artYOffset = 0.0
     # intelligence
     self.AI = AI()
+    self.callbacks = {}
     
   def setSpriteStatus(self, hasSprite=False, spriteType=None):
     if hasSprite:

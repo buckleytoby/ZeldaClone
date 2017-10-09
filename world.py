@@ -119,6 +119,15 @@ class World(object):
     factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
     pos_pixel = np.multiply(pos_tile, factor) #check syntax
     return pos_pixel.tolist()
+
+  def convertPixelToScreen(self, pixelList, screenLocation):
+    # subtract the screen location, in tiles, from the pixels
+    pos_pixels = np.array(pixelList, dtype='float')
+    pos_screen = np.array(screenLocation, dtype='float')
+    factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
+    out = pos_pixels - np.multiply(pos_screen, factor) #check syntax
+    return out.tolist()
+
     
     
   def gencost(self, width, height):
@@ -159,8 +168,11 @@ class World(object):
 
   
   def writeScreen(self, gameObjects, gameObjectsARR, screenLocation):
-    self.screenLocationX = int(screenLocation[0])
-    self.screenLocationY = int(screenLocation[1])
+    self.screenLocation = np.array(screenLocation)
+    self.screenMaxIDX = self.screenLocation + 1 + np.array( 
+      (screenTileWidth, screenTileHeight), dtype='float')
+    self.screenLocationX = int(self.screenLocation[0])
+    self.screenLocationY = int(self.screenLocation[1])
     
     def recurse(mapType): #must check ability to change isDrawn in nested function, it's bit me before
       if isDrawn[mapType]: #all parents are drawn too, then
@@ -177,46 +189,58 @@ class World(object):
     isDrawn = defaultdict(bool)
     for mapType in self.maps:
       recurse(mapType)
+
+  def clipScreen(self, mapLength):
+    maxIDX_x, maxIDX_y = np.clip(self.screenMaxIDX, np.zeros(2), 
+      np.array(mapLength))
+    minIDX_x, minIDX_y = np.clip(self.screenLocation, np.zeros(2), 
+      np.array(mapLength))
+    # convert to integer
+    maxIDX_x = int(maxIDX_x); maxIDX_y = int(maxIDX_y)
+    minIDX_x = int(minIDX_x); minIDX_y = int(minIDX_y)
+    return maxIDX_x, maxIDX_y, minIDX_x, minIDX_y
     
   
   def drawMap(self, mapType):
     mapARR = self.maps[mapType].tileData
     mapLenX, mapLenY = mapARR.shape
     #restrict screen to map-bounds
-    maxIDX_x = min([mapLenX, self.screenLocationX+screenTileWidth+1])
-    maxIDX_y = min([mapLenY, self.screenLocationY+screenTileHeight+1])
+    maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX, mapLenY))
     
     #offset backwards so that it'll appear correct
-    for i in range(self.screenLocationX, maxIDX_x):
-      for j in range(self.screenLocationY, maxIDX_y):
+    for i in range(minIDX_x, maxIDX_x):
+      for j in range(minIDX_y, maxIDX_y):
         if mapARR[i][j] == -1 or mapARR[i][j] == 19:
           continue
         xpixel, ypixel = self.convertTileToPixel((i, j))
+        xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), 
+          (self.screenLocationX, self.screenLocationY))
         tile = self.getTile(mapType, (i, j))
-        World.screen.blit(tile, (xpixel, ypixel))
+        World.screen.blit(tile, (xscreen, yscreen))
         
   def drawGameObjects(self, gameObjects, gameObjectsARR): #right now this could be pulled up into classHolder ...
     mapLenX = len(gameObjectsARR)
     mapLenY = len(gameObjectsARR[0])
     #setting map bounds for mobs
-    maxIDX_x = min([mapLenX, self.screenLocationX+screenTileWidth+1])
-    maxIDX_y = min([mapLenY, self.screenLocationY+screenTileHeight+1])
+    maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX, mapLenY))
       
     #reset drawn status for each mob in frame
     self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
           
     #moving objects -- reverse order so that overlapping mobs are drawn correctly
-    for j in range(self.screenLocationY, maxIDX_y):
-      for i in range(self.screenLocationX, maxIDX_x):
+    for i in range(minIDX_y, maxIDX_y):
+      for j in range(minIDX_x, maxIDX_x):
         for gameObjectID in gameObjectsARR[i][j]:
           gameObject = gameObjects[gameObjectID]
           if gameObject.hasSprite and gameObject.drawn == False:
             xpixel, ypixel = gameObject.getArtPosition_pixels()
-            
+            xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), 
+              (self.screenLocationX, self.screenLocationY))
+
             spriteType = gameObject.spriteType
             spriteIndex = gameObject.animation.getSpriteIndex()
             sprite = self.objectArts[spriteType].getSprite(spriteIndex)
-            World.screen.blit(sprite, (xpixel, ypixel))
+            World.screen.blit(sprite, (xscreen, yscreen))
             gameObject.drawn = True
       
       

@@ -12,7 +12,7 @@ Soldier
 
 
 [INCL]
-maps\title.txt
+maps\main.txt
 
 
 

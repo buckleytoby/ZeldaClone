@@ -12,8 +12,9 @@ class Screen(object):
     self.offsetY = -1.0 * screenTileHeight / 2.0
   
   def update(self, x, y):
-    self.screenLocationX = x + self.offsetX
-    self.screenLocationY = y + self.offsetY
+    screenLocation = np.array([x + self.offsetX, y + self.offsetY])
+
+    self.screenLocationX, self.screenLocationY = screenLocation.tolist()
   
   def getLocation(self):
     return (self.screenLocationX, self.screenLocationY)
@@ -28,7 +29,9 @@ class Keyboard(object):
                         pygame.K_SPACE:  'interact',
                         pygame.K_ESCAPE: 'exit',
                         pygame.QUIT:     'exit',
-                        pygame.K_e:      'edit'}
+                        pygame.K_e:      'edit',
+                        pygame.K_RSHIFT: 'attack',
+                        }
 
   def getAction(self, key):
     if key in self.convertDict:
@@ -49,6 +52,11 @@ class Player(object):
     self.gameObject = None
     self.screenClass = Screen()
     self.keyboard = Keyboard()
+
+    self.callbacks = {}
+    self.callbacks['attack'] = self.attack
+
+  def attack(self):
     
   def setGameObject(self, object):
     self.gameObject = object
@@ -60,6 +68,7 @@ class Player(object):
     #convert keyboard+mouse events into actions
     dx = 0; dy = 0
     actions = []
+    callCallbacks = []
     for event in events:
       if event.type==pygame.KEYDOWN:
         action = self.keyboard.getAction(event.key)
@@ -70,6 +79,7 @@ class Player(object):
         if action is 'edit':
           #turn on edit mode
           print('edit mode')
+        if action is 'attack': callCallbacks.append(action)
         
       elif event.type==pygame.QUIT: sys.exit()
     # real-time events
@@ -81,6 +91,7 @@ class Player(object):
       if realTimeActions is 'up':    dy -= 1
       if realTimeActions is 'down':  dy += 1
       
+    # movement
     dx *= round(self.gameObject.velocity)
     dy *= round(self.gameObject.velocity)
     if abs(dx) == abs(dy) == 1: #moving diagonally
@@ -89,6 +100,9 @@ class Player(object):
     self.dx=dx
     self.dy=dy
     self.dt = 0
+    # callbacks
+    for callback in callCallbacks:
+      self.callbacks[callback]()
     
     
     self.screenClass.update(self.gameObject.x, self.gameObject.y)
