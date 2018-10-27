@@ -21,18 +21,18 @@ class Factory(object):
 class GameObjectFactory(Factory):
   # factory class for creating game objects
   def __init__(self):
-    super().__init__(GameObject) #check syntax
+    super(GameObjectFactory, self).__init__(GameObject) #check syntax
     
   def create(self, x, y):
     self.values['x'] = x
     self.values['y'] = y
-    created = super().create()
+    created = super(GameObjectFactory, self).create()
     return created
   
   
 class SoldierFactory(GameObjectFactory):
   def __init__(self):
-    super().__init__()
+    super(SoldierFactory, self).__init__()
     self.values['width'] = 2.0
     self.values['height'] = 3.0
     self.values['pixelWidth'] = 16
@@ -43,12 +43,15 @@ class SoldierFactory(GameObjectFactory):
 
   
   def create(self, x, y):
-    object = super().create(x, y)
+    object = super(SoldierFactory, self).create(x, y)
     # callbacks
     getattr(object, 'callbacks')['attack'] = self.attack #unbound, but should be ok
     # setup
     object.setSpriteStatus(True, 'Soldier')
     return object
+  
+  def attack(self):
+    pass
 
   
   

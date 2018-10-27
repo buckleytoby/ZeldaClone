@@ -252,7 +252,7 @@ class TitleScreen(World):
   #class for title screen
   
   def __init__(self):
-    super().__init__()
+    super(TitleScreen, self).__init__()
     
     
     

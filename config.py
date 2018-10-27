@@ -7,7 +7,7 @@ import scipy.spatial as scSpatial
 from collections import defaultdict
 
 #globals
-scrsize=[640, 480] #in pixels
+scrsize=[640.0, 480.0] #in pixels
 aspRatio=scrsize[1]/scrsize[0]
 screenTileWidth = 40 #turn pixels into tiles, number of tiles in the visible screen
 screenTileHeight = int(screenTileWidth*aspRatio)

@@ -57,6 +57,7 @@ class Player(object):
     self.callbacks['attack'] = self.attack
 
   def attack(self):
+    pass
     
   def setGameObject(self, object):
     self.gameObject = object

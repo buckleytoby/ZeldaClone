@@ -18,14 +18,14 @@ class MasterClass(object):
     self.screen = screen
     
     # title screen
-    config = r'config\title.txt'
+    config = r'/home/offworld3/CodeBase/fun/ZeldaClone/config/title.txt'
     self.title = ClassHolder(config)
     self.title.worldClass = TitleScreen()
     # load config
     self.title.loadConfigFile()
     
     # main game
-    config = r'config\main.txt'
+    config = r'/home/offworld3/CodeBase/fun/ZeldaClone/config/main.txt'
     self.main = ClassHolder(config)
     # load config
     self.main.loadConfigFile()
@@ -67,7 +67,7 @@ pygame.init()
 #logo=pygame.image.load("logo filename")
 #pygame.display.set_icon(logo)
 pygame.display.set_caption('Ephiro') #Eponymous Hero -> EpHero -> Ephiro
-screen=pygame.display.set_mode(scrsize)
+screen=pygame.display.set_mode([int(i) for i in scrsize])
 World.screen = screen
 
 # instantiate starting classes
