@@ -1,18 +1,18 @@
 [source]
 type=tiles
-/home/offworld3/CodeBase/fun/ZeldaClone/art/tiles.png
+/home/offworld5/Fun/ZeldaClone/art/tiles.png
 [end]
 
 [source]
 type=gameObjects
-/home/offworld3/CodeBase/fun/ZeldaClone/art/gameObjects.png
+/home/offworld5/Fun/ZeldaClone/art/gameObjects.png
 Player
 Soldier
 
 
 
 [INCL]
-/home/offworld3/CodeBase/fun/ZeldaClone/maps/main.txt
+/home/offworld5/Fun/ZeldaClone/maps/main.txt
 
 
 

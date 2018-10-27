@@ -18,14 +18,14 @@ class MasterClass(object):
     self.screen = screen
     
     # title screen
-    config = r'/home/offworld3/CodeBase/fun/ZeldaClone/config/title.txt'
+    config = r'/home/offworld5/Fun/ZeldaClone/config/title.txt'
     self.title = ClassHolder(config)
     self.title.worldClass = TitleScreen()
     # load config
     self.title.loadConfigFile()
     
     # main game
-    config = r'/home/offworld3/CodeBase/fun/ZeldaClone/config/main.txt'
+    config = r'/home/offworld5/Fun/ZeldaClone/config/main.txt'
     self.main = ClassHolder(config)
     # load config
     self.main.loadConfigFile()

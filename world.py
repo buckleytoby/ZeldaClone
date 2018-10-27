@@ -174,7 +174,7 @@ class World(object):
     self.screenLocationX = int(self.screenLocation[0])
     self.screenLocationY = int(self.screenLocation[1])
     
-    def recurse(mapType): #must check ability to change isDrawn in nested function, it's bit me before
+    def recurse(mapType): #must check ability to change isDrawn in nested Function, it's bit me before
       if isDrawn[mapType]: #all parents are drawn too, then
         return
       elif mapType in self.mapParents:
