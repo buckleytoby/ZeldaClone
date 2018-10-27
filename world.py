@@ -231,8 +231,8 @@ class World(object):
     self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
           
     #moving objects -- reverse order so that overlapping mobs are drawn correctly
-    for i in range(minIDX_y, maxIDX_y):
-      for j in range(minIDX_x, maxIDX_x):
+    for i in range(maxIDX_y-1, minIDX_y, -1):
+      for j in range(maxIDX_x-1, minIDX_x, -1):
         for gameObjectID in gameObjectsARR[i][j]:
           gameObject = gameObjects[gameObjectID]
           if gameObject.hasSprite and gameObject.drawn == False:
