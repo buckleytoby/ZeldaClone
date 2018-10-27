@@ -168,7 +168,7 @@ class World(object):
 
   
   def writeScreen(self, gameObjects, gameObjectsARR, screenLocation):
-    self.screenLocation = np.array(screenLocation)
+    self.screenLocation = np.array(screenLocation, dtype='float')
     self.screenMaxIDX = self.screenLocation + 1 + np.array( 
       (screenTileWidth, screenTileHeight), dtype='float')
     self.screenLocationX = int(self.screenLocation[0])
@@ -206,6 +206,9 @@ class World(object):
     mapLenX, mapLenY = mapARR.shape
     #restrict screen to map-bounds
     maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX, mapLenY))
+
+
+    # add sub-tile offset
     
     #offset backwards so that it'll appear correct
     for i in range(minIDX_x, maxIDX_x):
@@ -213,8 +216,8 @@ class World(object):
         if mapARR[i][j] == -1 or mapARR[i][j] == 19:
           continue
         xpixel, ypixel = self.convertTileToPixel((i, j))
-        xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), 
-          (self.screenLocationX, self.screenLocationY))
+        xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
+          #(self.screenLocationX, self.screenLocationY))
         tile = self.getTile(mapType, (i, j))
         World.screen.blit(tile, (xscreen, yscreen))
         
@@ -234,8 +237,8 @@ class World(object):
           gameObject = gameObjects[gameObjectID]
           if gameObject.hasSprite and gameObject.drawn == False:
             xpixel, ypixel = gameObject.getArtPosition_pixels()
-            xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), 
-              (self.screenLocationX, self.screenLocationY))
+            xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
+              #(self.screenLocationX, self.screenLocationY))
 
             spriteType = gameObject.spriteType
             spriteIndex = gameObject.animation.getSpriteIndex()
