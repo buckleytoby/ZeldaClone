@@ -9,7 +9,7 @@ from collections import defaultdict
 #globals
 scrsize=[640.0, 480.0] #in pixels
 aspRatio=scrsize[1]/scrsize[0]
-screenTileWidth = 40 #turn pixels into tiles, number of tiles in the visible screen
+screenTileWidth = 22 #turn pixels into tiles, number of tiles in the visible screen
 screenTileHeight = int(screenTileWidth*aspRatio)
 pixelsPerTileWidth = int(scrsize[0]/screenTileWidth)
 pixelsPerTileHeight = int(scrsize[1]/screenTileHeight) #square Tiles

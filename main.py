@@ -38,8 +38,14 @@ class MasterClass(object):
     self.holder = self.title
       
   def update(self, seconds, events):
+    # update game with keyboard events
     actions = self.holder.playerClass.update(events)
+
+    # update physics with time passage
     self.holder.physicsClass.update(seconds, self.holder.gameObjects)
+
+    # update screen
+    self.holder.playerClass.screenClass.update(self.holder.playerClass.gameObject.x, self.holder.playerClass.gameObject.y)
     
     # check for high-level player actions
     if 'interact' in actions and self.holder == self.title:

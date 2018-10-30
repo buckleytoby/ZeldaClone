@@ -235,6 +235,7 @@ class World(object):
       for j in range(maxIDX_x-1, minIDX_x, -1):
         for gameObjectID in gameObjectsARR[i][j]:
           gameObject = gameObjects[gameObjectID]
+          #pdb.set_trace()
           if gameObject.hasSprite and gameObject.drawn == False:
             xpixel, ypixel = gameObject.getArtPosition_pixels()
             xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)

@@ -22,10 +22,10 @@ class AttackModule(object):
 
 class AI(object):
 
-  def __init(self):
-    pass
+  def __init__(self):
+    self.dx = 0.0
+    self.dy = 0.0
   
   def getAction(self):
-    dx = 0.0
-    dy = 0.0
-    return (dx, dy)
+    out = {'dv': np.array([self.dx, self.dy])}
+    return out

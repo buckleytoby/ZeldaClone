@@ -35,7 +35,7 @@ class Keyboard(object):
 
   def getAction(self, key):
     if key in self.convertDict:
-      print(self.convertDict[key])
+      #print(self.convertDict[key])
       return self.convertDict[key]
     else:
       return ''
@@ -46,9 +46,10 @@ class Keyboard(object):
       if status[key]: actions.append(self.convertDict[key])
     return actions
 
-class Player(object):
+class Player(AI):
   def __init__(self):
     #default values
+    self.mass = 70.0 # kg
     self.gameObject = None
     self.screenClass = Screen()
     self.keyboard = Keyboard()
@@ -93,24 +94,19 @@ class Player(object):
       if realTimeActions is 'down':  dy += 1
       
     # movement
-    dx *= round(self.gameObject.velocity)
-    dy *= round(self.gameObject.velocity)
-    if abs(dx) == abs(dy) == 1: #moving diagonally
+    dx *= round(self.gameObject.max_velocity)
+    dy *= round(self.gameObject.max_velocity)
+    if abs(dx) > 0.0 and abs(dy) > 0.0: #moving diagonally
       dx *= 0.707106
       dy *= 0.707106
-    self.dx=dx
-    self.dy=dy
+    self.dx = dx
+    self.dy = dy
     self.dt = 0
     # callbacks
     for callback in callCallbacks:
       self.callbacks[callback]()
     
-    
-    self.screenClass.update(self.gameObject.x, self.gameObject.y)
     return actions
-    
-  def getAction(self):
-    return (self.dx, self.dy)
     
     
     

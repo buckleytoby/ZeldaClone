@@ -12,7 +12,7 @@ Soldier
 
 
 [INCL]
-/home/offworld5/Fun/ZeldaClone/maps/title.txt
+/home/offworld5/Fun/ZeldaClone/maps/map2.txt
 
 
 
