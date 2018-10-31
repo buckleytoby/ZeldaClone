@@ -1,7 +1,7 @@
 
 from config       import *
 from AI           import *
-import math2d as m2d
+from utils        import *
 
 
 class Factory(object):
@@ -38,11 +38,13 @@ class SoldierFactory(GameObjectFactory):
   def __init__(self):
     super(SoldierFactory, self).__init__()
     self.values['width']      = 1.0
-    self.values['height']     = 1.5
+    self.values['height']     = 1.0
+    self.values['artWidth']      = 1.0
+    self.values['artHeight']     = 1.5
     self.values['mass']       = 100.0 # kg
-    self.values['pixelWidth'] = 16
-    self.values['pixelHeight'] = 24
-    self.values['max_velocity'] = 6.0 #m/s
+    self.values['pixelWidth'] = 16 # size of the sprite image
+    self.values['pixelHeight'] = 24 # size of the sprite image
+    self.values['max_velocity'] = 4.0 #m/s
     self.values['objectType'] = 'Soldier'
     self.values['attack'] = self.attack
 
@@ -58,6 +60,10 @@ class SoldierFactory(GameObjectFactory):
   def attack(self):
     pass
 
+class PlayerFactory(SoldierFactory):
+  def __init__(self):
+    super(PlayerFactory, self).__init__()
+    self.values['max_velocity'] = 6.0 #m/s
   
   
   
@@ -127,8 +133,9 @@ class GameObject(object):
     self.artHeight = 0.0
     self.artXOffset = 0.0
     self.artYOffset = 0.0
+    #------------------------------------------
     # intelligence
-    self.AI = AI()
+    self.AI = AI(self)
     self.callbacks = {}
     
   def setSpriteStatus(self, hasSprite=False, spriteType=None):
@@ -150,9 +157,10 @@ class GameObject(object):
   def getArtPosition_tiles(self):
     """ get the art-frame in map-frame. Unit: tiles
     """
-
-    artX = self.x + self.artXOffset
-    artY = self.y + self.artYOffset
+    artXOffset = self.artWidth - self.width
+    artYOffset = self.artHeight - self.height
+    artX = self.x + artXOffset
+    artY = self.y + artYOffset
     return artX, artY
     
   def getArtPosition_pixels(self):
@@ -163,19 +171,43 @@ class GameObject(object):
 
   def update(self, seconds):
     pass
-    
-  def get_footprint_rect(self):
+
+  def get_position(self):
+    return np.array([self.x, self.y])
+  position = property(get_position)
+
+  def get_rect(self):
     """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
     """
-    #x = [self.x, self.x + self.width]
-    #y = [self.y, self.y + self.height]
     lt = [self.x, self.y]
     wh = [self.width, self.height]
-    rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
-    #rect = m2d.geometry.Patch([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
+    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
+    x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
+    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
     return rect
-  
-  rect = property(get_footprint_rect)
+
+  def get_rect_art(self):
+    """ get pygame Rect of the object's art. i.e. the portion that can be collided with.
+    """
+    lt = self.getArtPosition_tiles()
+    wh = [self.artWidth, self.artHeight]
+    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
+    x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
+    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
+    return rect
+  rect = property(get_rect)
+  rect_art = property(get_rect_art)
+
+  def intersect(self, other, art=False):
+    """ intersect with other, other can be an object which contains rect, or a Patch directly
+    """
+    if art:
+      if isinstance(other, PatchExt): out = self.rect_art.intersect(other)
+      else: out = self.rect_art.intersect(other.rect_art)
+    else:
+      if isinstance(other, PatchExt): out = self.rect.intersect(other)
+      else: out = self.rect.intersect(other.rect)
+    return out
   
   def get_velocity(self):
     out = np.array([self.dx, self.dy])

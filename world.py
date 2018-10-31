@@ -1,5 +1,6 @@
 
 from config       import *
+from utils        import *
 
 
 
@@ -18,16 +19,29 @@ class ObjectArt(object): #procedure: get sprite index from gameObject.animation.
     return self.data[spriteIndx]
 
 
-class TileArt(object):
+
+class Tile():
   def __init__(self):
-    self.data = []
+    self.can_collide = False
+    self.data = None
+  
+class TileArt(object):
+  """ This class defines the different tiles and their attributes
+  """
+  def __init__(self):
+    self.tiles = []
   
   def clear(self):
-    del self.data[:]
-  def addTile(self, tile):
-    self.data.append(tile)
+    del self.tiles[:]
+
+  def addTile(self, art):
+    tile = Tile()
+    tile.art = art
+    self.tiles.append(tile)
 
 class Map(object):
+  """ This class holds data for a map in the game. Allows for layering of foreground, background, etc.
+  """
   def __init__(self):
     self.invisible = False
     self.tileData = []
@@ -35,9 +49,18 @@ class Map(object):
     #self.gameObjects = None
 
   def setTileData(self, data):
+    """ tile data is an array the size of the map, which contains indices which specify which tile type the tile is
+    """
     self.tileData = data
     self.numTilesWidth  = data.shape[0]
     self.numTilesHeight = data.shape[1]
+
+  def get_rect(self, i, j):
+    lt = float(i), float(j)
+    wh = [1.0, 1.0]
+    x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
+    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
+    return rect
 
 class World(object):
   #class for the map
@@ -88,8 +111,8 @@ class World(object):
       spriteRow=[]
       pixelWidth  = factories[objectType].values['pixelWidth']
       pixelHeight = factories[objectType].values['pixelHeight']
-      tileWidth   = factories[objectType].values['width']
-      tileHeight  = factories[objectType].values['height']
+      tileWidth   = factories[objectType].values['artWidth']
+      tileHeight  = factories[objectType].values['artHeight']
       tiley = 0
       while tiley*pixelHeight < imgh:
         rect=(tilex*pixelWidth, tiley*pixelHeight, pixelWidth, pixelHeight)
@@ -109,10 +132,16 @@ class World(object):
   def setParent(self, mapType, parentType):
     self.mapParents[mapType] = parentType
     
-  def getTile(self, mapType, indices):
+  def getTileArt(self, mapType, indices):
     i, j = indices
     tileValue = self.maps[mapType].tileData[i][j]
-    return self.tileArt.data[tileValue]
+    return self.tileArt.tiles[tileValue].art
+
+  def can_tile_collide(self, mapType, indices):
+    i, j = indices
+    tileValue = self.maps[mapType].tileData[i][j]
+    out = self.tileArt.tiles[tileValue].can_collide
+    return out
     
   def convertTileToPixel(self, indices): #offset backwards so that it'll appear correct ????????????
     pos_tile = np.array(indices, dtype='float')
@@ -167,7 +196,7 @@ class World(object):
   
 
   
-  def writeScreen(self, gameObjects, gameObjectsARR, screenLocation):
+  def writeScreen(self, gameObjects, gameObjectsARR, screenLocation, screen_rect):
     self.screenLocation = np.array(screenLocation, dtype='float')
     self.screenMaxIDX = self.screenLocation + 1 + np.array( 
       (screenTileWidth, screenTileHeight), dtype='float')
@@ -184,7 +213,7 @@ class World(object):
       isDrawn[mapType] = True
       if self.maps[mapType].invisible: return
       self.drawMap(mapType)
-      self.drawGameObjects(gameObjects, gameObjectsARR)
+      self.draw_game_objects(gameObjects, screen_rect)
       
     isDrawn = defaultdict(bool)
     for mapType in self.maps:
@@ -218,14 +247,32 @@ class World(object):
         xpixel, ypixel = self.convertTileToPixel((i, j))
         xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
           #(self.screenLocationX, self.screenLocationY))
-        tile = self.getTile(mapType, (i, j))
-        World.screen.blit(tile, (xscreen, yscreen))
+        art = self.getTileArt(mapType, (i, j))
+        World.screen.blit(art, (xscreen, yscreen))
+
+  def draw_game_objects(self, gameObjects, screen_rect):
+    """ iterate through gameobjects and only draw if they're on the screen
+    """
+    #reset drawn status for each mob in frame
+    ###self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
+
+
+    for key in gameObjects:
+      go = gameObjects[key]
+      go.drawn = False
+      if go.intersect(screen_rect, art=True):
+        self.low_draw_art(go)
         
   def drawGameObjects(self, gameObjects, gameObjectsARR): #right now this could be pulled up into classHolder ...
+    """ draw game objects by iterating through "map" of units (cheap man's quad-tree)
+    TODO: fix bug -- gameObjectsARR never gets updated
+    """
     mapLenX = len(gameObjectsARR)
     mapLenY = len(gameObjectsARR[0])
     #setting map bounds for mobs
     maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX, mapLenY))
+
+    pdb.set_trace()
       
     #reset drawn status for each mob in frame
     self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
@@ -236,16 +283,19 @@ class World(object):
         for gameObjectID in gameObjectsARR[i][j]:
           gameObject = gameObjects[gameObjectID]
           #pdb.set_trace()
-          if gameObject.hasSprite and gameObject.drawn == False:
-            xpixel, ypixel = gameObject.getArtPosition_pixels()
-            xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
-              #(self.screenLocationX, self.screenLocationY))
+          self.low_draw_art(gameObject)
 
-            spriteType = gameObject.spriteType
-            spriteIndex = gameObject.animation.getSpriteIndex()
-            sprite = self.objectArts[spriteType].getSprite(spriteIndex)
-            World.screen.blit(sprite, (xscreen, yscreen))
-            gameObject.drawn = True
+  def low_draw_art(self, go):
+    if go.hasSprite and go.drawn == False:
+      xpixel, ypixel = go.getArtPosition_pixels()
+      xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
+        #(self.screenLocationX, self.screenLocationY))
+
+      spriteType = go.spriteType
+      spriteIndex = go.animation.getSpriteIndex()
+      sprite = self.objectArts[spriteType].getSprite(spriteIndex)
+      World.screen.blit(sprite, (xscreen, yscreen))
+      go.drawn = True
       
       
       

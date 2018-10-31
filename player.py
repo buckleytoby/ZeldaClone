@@ -1,6 +1,7 @@
 
 from config       import *
 from AI           import *
+from utils        import *
 
 
 class Screen(object):
@@ -18,6 +19,17 @@ class Screen(object):
   
   def getLocation(self):
     return (self.screenLocationX, self.screenLocationY)
+
+  def get_footprint_rect(self):
+    """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
+    """
+    lt = self.getLocation()
+    wh = [screenTileWidth, screenTileHeight]
+    x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
+    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
+    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
+    return rect
+  rect = property(get_footprint_rect)
 
 class Keyboard(object):
   #specify conversion from keyboard event to player action
@@ -47,7 +59,7 @@ class Keyboard(object):
     return actions
 
 class Player(AI):
-  def __init__(self):
+  def __init__(self, *args, **kwargs):
     #default values
     self.mass = 70.0 # kg
     self.gameObject = None
@@ -61,6 +73,7 @@ class Player(AI):
     pass
     
   def setGameObject(self, object):
+    self.parent = object
     self.gameObject = object
     self.gameObject.objectType = 'Player'
     self.gameObject.spriteType = 'Player'
@@ -107,6 +120,10 @@ class Player(AI):
       self.callbacks[callback]()
     
     return actions
+  
+  def getAction(self):
+    out = {'dv': np.array([self.dx, self.dy])}
+    return out
     
     
     

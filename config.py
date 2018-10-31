@@ -2,6 +2,7 @@
 
 import os,sys,copy,random,queue,math,time,pdb
 import pygame
+import math2d as m2d
 import numpy as np
 import scipy.spatial as scSpatial
 from collections import defaultdict
@@ -15,3 +16,7 @@ pixelsPerTileWidth = int(scrsize[0]/screenTileWidth)
 pixelsPerTileHeight = int(scrsize[1]/screenTileHeight) #square Tiles
 psuedoPixelsPerTileWidth = int(pixelsPerTileWidth/16) #16 psuedo-pixels per tile
 psuedoPixelsPerTileHeight = int(pixelsPerTileHeight/16) 
+
+
+# global data-stream for sensing and w/e
+DATA = {}

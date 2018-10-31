@@ -22,10 +22,26 @@ class AttackModule(object):
 
 class AI(object):
 
-  def __init__(self):
+  def __init__(self, parent):
+    self.parent = parent
     self.dx = 0.0
     self.dy = 0.0
+
+  def get_position(self):
+    out = self.parent.position
+    return out
+  position = property(get_position)
   
   def getAction(self):
-    out = {'dv': np.array([self.dx, self.dy])}
+    dv = np.zeros(2)
+    me = self.position
+    if 'player_xy' in DATA:
+      target = np.array(DATA['player_xy'])
+      vector = target - me
+      if not np.allclose(vector, np.zeros(2)):
+        unit_direction = vector / np.linalg.norm(vector)
+        dv = self.parent.max_velocity * unit_direction
+
+    out = {'dv': dv}
+    #out = {'dv': np.array([self.dx, self.dy])}
     return out

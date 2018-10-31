@@ -19,16 +19,18 @@ class ClassHolder(object):
     self.gameObjects = {}
     self.gameObjectsARR = []
     #factories
-    soldierFactory = SoldierFactory()
+    soldier_factory = SoldierFactory()
+    player_factory = PlayerFactory()
     # group the factories
-    self.factories = {'Soldier': soldierFactory,
-                 'Player':  soldierFactory}
+    self.factories = {'Soldier': soldier_factory,
+                 'Player':  player_factory}
 
     
     
   def writeScreen(self):
     screenLocation = self.playerClass.screenClass.getLocation()
-    self.worldClass.writeScreen(self.gameObjects, self.gameObjectsARR, screenLocation)
+    screen_rect = self.playerClass.screenClass.rect
+    self.worldClass.writeScreen(self.gameObjects, self.gameObjectsARR, screenLocation, screen_rect)
     
   def addGameObject(self, x, y, object):
     self.gameObjects[object.id] = object
@@ -66,6 +68,20 @@ class ClassHolder(object):
         elif type == 'tiles':
           line=f.parse_lines()
           self.worldClass.loadTiles(line, 16, 16)
+          count = 0
+          while line != '[end]':
+            line = f.parse_lines()
+            splitted = line.split(',') # csv
+            for str1 in splitted:
+              try: 
+                collide = bool(int(str1))
+              except:
+                continue
+              self.worldClass.tileArt.tiles[count].can_collide = collide
+              count += 1
+
+
+
             
           
       elif line == '[header]': #this always comes before [layers]
@@ -97,7 +113,7 @@ class ClassHolder(object):
             for i in range(0, mapWidth):
               mapMatrix[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
           self.worldClass.setMap(mapType, mapMatrix)
-        elif mapType == 'gameObjects':
+        elif mapType == 'gameObjects': # special map type for units
           self.gameObjectsARR = [[[] for y in range(mapHeight)] for x in range(mapWidth)]
           for y in range(0, mapHeight):
             dlist=parse_data(f.parse_lines())

@@ -15,6 +15,8 @@ from AI           import *
 class MasterClass(object):
   #use this class to actually specify specifics for the game / levels, later can replace hard-coded with text input
   def __init__(self, screen):
+    """ initialize the game and set up the classes
+    """
     self.screen = screen
     
     # title screen
@@ -38,14 +40,19 @@ class MasterClass(object):
     self.holder = self.title
       
   def update(self, seconds, events):
+    """ update each part of the game's engine
+    """
     # update game with keyboard events
     actions = self.holder.playerClass.update(events)
 
     # update physics with time passage
-    self.holder.physicsClass.update(seconds, self.holder.gameObjects)
+    self.holder.physicsClass.update(seconds, self.holder.gameObjects, self.holder.worldClass, 'staticObjects')
 
     # update screen
     self.holder.playerClass.screenClass.update(self.holder.playerClass.gameObject.x, self.holder.playerClass.gameObject.y)
+
+    # add to data stream
+    DATA["player_xy"] = self.holder.playerClass.position
     
     # check for high-level player actions
     if 'interact' in actions and self.holder == self.title:
@@ -56,6 +63,8 @@ class MasterClass(object):
       sys.exit()
     
   def writeScreen(self):
+    """ write the user screen
+    """
     self.holder.writeScreen()
     
 

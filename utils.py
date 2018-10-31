@@ -37,3 +37,40 @@ class Parser(object):
 		return self.doc_lines[self.line].rstrip('\n')
 	def close(self):
 		self.doc.close()
+
+class PatchExt(m2d.geometry.Patch):
+		def get_center(self):
+				""" get the center
+				"""
+				center = 0.5 * np.array([np.sum(self.xlims), np.sum(self.ylims)])
+				return center
+		center = property(get_center)
+
+		def get_bottom(self):
+			""" bottom is w.r.t. screen (user)
+			"""
+			out = self.ylims[-1]
+			return out
+		
+		def get_top(self):
+			""" top is w.r.t. screen (user)
+			"""
+			out = self.ylims[0]
+			return out
+
+		def get_left(self):
+			""" left is w.r.t. screen (user)
+			"""
+			out = self.xlims[0]
+			return out
+
+		def get_right(self):
+			""" right is w.r.t. screen (user)
+			"""
+			out = self.xlims[-1]
+			return out
+
+		bottom = property(get_bottom)
+		top    = property(get_top)
+		left   = property(get_left)
+		right  = property(get_right)

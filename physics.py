@@ -15,7 +15,7 @@ class Physics(object):
     self.gameObjects = None
     self.gameObjectsARR = None
       
-  def update(self, timeElapsed, gameObjects):
+  def update(self, timeElapsed, gameObjects, worldClass, mapType):
     dt = timeElapsed
     
     vel_dict = {}
@@ -34,21 +34,6 @@ class Physics(object):
       gameObject.x += dt * dx
       gameObject.y += dt * dy
 
-      # check collision against static objects
-      ###for key in static_objects:
-      ###  static_object = static_objects[key]
-      """
-      if self.rect.colliderect(wall.rect):
-        if dx > 0: # Moving right; Hit the left side of the wall
-            self.rect.right = wall.rect.left
-        if dx < 0: # Moving left; Hit the right side of the wall
-            self.rect.left = wall.rect.right
-        if dy > 0: # Moving down; Hit the top side of the wall
-            self.rect.bottom = wall.rect.top
-        if dy < 0: # Moving up; Hit the bottom side of the wall
-            self.rect.top = wall.rect.bottom
-      """
-
     # second, resolve all collisions with gameObjects
     vel_residual = self.collision_resolution(vel_dict, timeElapsed, gameObjects)
 
@@ -60,6 +45,28 @@ class Physics(object):
       #gameObject.animation.updateSprite(dx, dy)
       gameObject.x += dt * dx
       gameObject.y += dt * dy
+
+      # must be last: check collision against static objects
+      #indices = gameObject.get_overlap_tiles
+      indices = [[int(gameObject.x), int(gameObject.y)]]
+      for i, j in indices:
+        if worldClass.can_tile_collide(mapType, [i, j]):
+          rect = worldClass.maps[mapType].get_rect(i, j)
+          
+          dx = gameObject.dx
+          dy = gameObject.dy
+
+          #pdb.set_trace()
+          
+          if gameObject.intersect(rect):
+            if dx > 0: # Moving right; Hit the left side of the wall
+                gameObject.x = rect.left - gameObject.width
+            if dx < 0: # Moving left; Hit the right side of the wall
+                gameObject.x = rect.right
+            if dy > 0: # Moving down; Hit the top side of the wall
+                gameObject.y = rect.top
+            if dy < 0: # Moving up; Hit the bottom side of the wall
+                gameObject.y = rect.bottom - gameObject.height
 
   def collision_resolution(self, vel_dict, timeElapsed, gameObjects):
     """ take a potentially collision-filled map and resolve collisions
@@ -84,7 +91,7 @@ class Physics(object):
       if go1.id == go2.id:
         continue
 
-      if go1.rect.colliderect(go2.rect):
+      if go1.intersect(go2):
         # force field away from center-of-mass
         dv1 = go2.com_vector(go1) * go2.mass / 30.0
         dv2 = go1.com_vector(go2) * go1.mass / 30.0

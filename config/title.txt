@@ -1,6 +1,8 @@
 [source]
 type=tiles
 /home/offworld5/Fun/ZeldaClone/art/tiles.png
+0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+
 [end]
 
 [source]
