@@ -70,7 +70,9 @@ class Player(AI):
     self.callbacks['attack'] = self.attack
 
   def attack(self):
-    pass
+    """ create damage object
+    """
+    
     
   def setGameObject(self, object):
     self.parent = object

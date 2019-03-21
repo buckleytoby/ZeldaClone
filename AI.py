@@ -43,5 +43,5 @@ class AI(object):
         dv = self.parent.max_velocity * unit_direction
 
     out = {'dv': dv}
-    #out = {'dv': np.array([self.dx, self.dy])}
+    # out = {'dv': np.array([self.dx, self.dy])}
     return out

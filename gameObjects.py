@@ -30,6 +30,8 @@ class GameObjectFactory(Factory):
   def create(self, x, y):
     self.values['x'] = x
     self.values['y'] = y
+    self.values['old_x'] = x
+    self.values['old_y'] = y
     created = super(GameObjectFactory, self).create()
     return created
   
@@ -39,12 +41,12 @@ class SoldierFactory(GameObjectFactory):
     super(SoldierFactory, self).__init__()
     self.values['width']      = 1.0
     self.values['height']     = 1.0
-    self.values['artWidth']      = 1.0
-    self.values['artHeight']     = 1.5
+    self.values['artWidth']      = 1.0 * 2
+    self.values['artHeight']     = 1.5 * 2
     self.values['mass']       = 100.0 # kg
     self.values['pixelWidth'] = 16 # size of the sprite image
     self.values['pixelHeight'] = 24 # size of the sprite image
-    self.values['max_velocity'] = 4.0 #m/s
+    self.values['max_velocity'] = 2.0 #m/s
     self.values['objectType'] = 'Soldier'
     self.values['attack'] = self.attack
 
@@ -64,6 +66,8 @@ class PlayerFactory(SoldierFactory):
   def __init__(self):
     super(PlayerFactory, self).__init__()
     self.values['max_velocity'] = 6.0 #m/s
+    self.values['artWidth']      = 1.0
+    self.values['artHeight']     = 1.5
   
   
   
@@ -117,8 +121,12 @@ class GameObject(object):
     self.drawHitBox = False
     self.x = 0.0
     self.y = 0.0
+    self.old_x = 0.0
+    self.old_y = 0.0
     self.dx = 0.0
     self.dy = 0.0
+    self.dx_actual = 0.0
+    self.dy_actual = 0.0
     self.width = 0.0
     self.height = 0.0
     # physics
@@ -156,11 +164,16 @@ class GameObject(object):
     
   def getArtPosition_tiles(self):
     """ get the art-frame in map-frame. Unit: tiles
+    ex:
+    artWidth = 1.5
+    width = 1.0
+    offset = 0.5
+    artX = x - 0.5
     """
     artXOffset = self.artWidth - self.width
     artYOffset = self.artHeight - self.height
-    artX = self.x + artXOffset
-    artY = self.y + artYOffset
+    artX = self.x - artXOffset
+    artY = self.y - artYOffset
     return artX, artY
     
   def getArtPosition_pixels(self):
@@ -170,11 +183,38 @@ class GameObject(object):
     return (pixelX, pixelY)
 
   def update(self, seconds):
-    pass
+    # update actual movement
+    self.dx_actual = self.x - self.old_x
+    self.dy_actual = self.y - self.old_y
+    self.old_x = self.x
+    self.old_y = self.y
 
   def get_position(self):
     return np.array([self.x, self.y])
   position = property(get_position)
+
+  def get_overlap_tiles(self):
+    """ get all tile indices which overlap in the form out = [[idx_x1, idx_y1], ..., [idx_xn, idx_yn]]
+    """
+    rect = self.rect
+    xmin = int(np.floor(rect.left))
+    xmax = int(np.ceil(rect.right) + 1)
+    ymin = int(np.floor(rect.top))
+    ymax = int(np.ceil(rect.bottom) + 1)
+    X, Y = np.mgrid[xmin:xmax:1, ymin:ymax:1]
+    indices = np.vstack([X.ravel(), Y.ravel()]).T
+    return indices
+
+  def get_rect_total_movement(self):
+    """ get pygame Rect of the object between last position and this position
+    """
+    # TODO
+    lt = [self.x, self.y]
+    wh = [self.width, self.height]
+    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
+    x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
+    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
+    return rect
 
   def get_rect(self):
     """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.

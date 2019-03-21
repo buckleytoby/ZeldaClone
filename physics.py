@@ -47,8 +47,7 @@ class Physics(object):
       gameObject.y += dt * dy
 
       # must be last: check collision against static objects
-      #indices = gameObject.get_overlap_tiles
-      indices = [[int(gameObject.x), int(gameObject.y)]]
+      indices = gameObject.get_overlap_tiles()
       for i, j in indices:
         if worldClass.can_tile_collide(mapType, [i, j]):
           rect = worldClass.maps[mapType].get_rect(i, j)
@@ -56,17 +55,44 @@ class Physics(object):
           dx = gameObject.dx
           dy = gameObject.dy
 
-          #pdb.set_trace()
+          # pdb.set_trace()
           
           if gameObject.intersect(rect):
-            if dx > 0: # Moving right; Hit the left side of the wall
-                gameObject.x = rect.left - gameObject.width
-            if dx < 0: # Moving left; Hit the right side of the wall
-                gameObject.x = rect.right
-            if dy > 0: # Moving down; Hit the top side of the wall
-                gameObject.y = rect.top
-            if dy < 0: # Moving up; Hit the bottom side of the wall
-                gameObject.y = rect.bottom - gameObject.height
+            # pdb.set_trace()
+            # see which direction is less distance to move
+            
+            if True: #np.abs(dx) < 1e-6 and np.abs(dy) < 1e-6:
+              # got pushed
+              xf1 = rect.left - gameObject.width
+              xf2 = rect.right
+              yf1 = rect.top - gameObject.height
+              yf2 = rect.bottom
+              dist1 = np.abs(gameObject.x - xf1)
+              dist2 = np.abs(gameObject.x - xf2)
+              dist3 = np.abs(gameObject.y - yf1)
+              dist4 = np.abs(gameObject.y - yf2)
+              argmin = np.argmin([dist1, dist2, dist3, dist4])
+              if argmin == 0: gameObject.x = xf1
+              if argmin == 1: gameObject.x = xf2
+              if argmin == 2: gameObject.y = yf1
+              if argmin == 3: gameObject.y = yf2
+            else:
+              xf = 9999.0
+              yf = 9999.0
+              if dx > 0: # Moving right; Hit the left side of the wall
+                xf = rect.left - gameObject.width
+              elif dx < 0: # Moving left; Hit the right side of the wall
+                xf = rect.right
+              if dy > 0: # Moving down; Hit the top side of the wall
+                yf = rect.top - gameObject.height
+              elif dy < 0: # Moving up; Hit the bottom side of the wall
+                yf = rect.bottom
+              dist_x = np.abs(gameObject.x - xf)
+              dist_y = np.abs(gameObject.y - yf)
+              if dist_x < dist_y:
+                gameObject.x = xf
+              else:
+                gameObject.y = yf
 
   def collision_resolution(self, vel_dict, timeElapsed, gameObjects):
     """ take a potentially collision-filled map and resolve collisions

@@ -20,14 +20,15 @@ class MasterClass(object):
     self.screen = screen
     
     # title screen
-    config = r'/home/offworld5/Fun/ZeldaClone/config/title.txt'
+    prefix = r'C:\Users\Offworld\Documents\GitHub\ZeldaClone' # raw string
+    config = os.path.join(prefix, "config", "title.txt")
     self.title = ClassHolder(config)
     self.title.worldClass = TitleScreen()
     # load config
     self.title.loadConfigFile()
     
     # main game
-    config = r'/home/offworld5/Fun/ZeldaClone/config/main.txt'
+    config = os.path.join(prefix, "config", "main.txt")
     self.main = ClassHolder(config)
     # load config
     self.main.loadConfigFile()
@@ -56,7 +57,8 @@ class MasterClass(object):
     
     # check for high-level player actions
     if 'interact' in actions and self.holder == self.title:
-      self.holder = self.main
+      pass
+      # self.holder = self.main
     
     if 'exit' in actions:
       # save & exit
