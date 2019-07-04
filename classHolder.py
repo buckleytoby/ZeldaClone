@@ -11,7 +11,7 @@ from physics      import *
 class ClassHolder(object):
   #hold all of the classes for a level
   def __init__(self, configFile):
-    self.configFile = configFile
+    self.configFile = process_file_name(configFile)
     self.worldClass   = World()
     self.playerClass  = Player()
     self.physicsClass = Physics()
@@ -54,20 +54,23 @@ class ClassHolder(object):
       elif line == '[INCL]':
         line=f.parse_lines()
         name=line.rstrip('\n')
-        g.append(Parser(name))
+        file_name = process_file_name(name)
+        g.append(Parser(file_name))
         f=g[-1]
       
       elif line == '[source]':
-        line=f.parse_lines()
+        line = f.parse_lines()
         type = line.split('=')[1] #get the word after '='
         if type == 'gameObjects':
-          fileName = f.parse_lines()
+          name = f.parse_lines()
+          file_name = process_file_name(name)
           #height = 
-          self.worldClass.loadGameObjects(fileName, f, self.factories)
+          self.worldClass.loadGameObjects(file_name, f, self.factories)
       
         elif type == 'tiles':
-          line=f.parse_lines()
-          self.worldClass.loadTiles(line, 16, 16)
+          line = f.parse_lines()
+          file_name = process_file_name(line)
+          self.worldClass.load_tiles(file_name, 16, 16)
           count = 0
           while line != '[end]':
             line = f.parse_lines()

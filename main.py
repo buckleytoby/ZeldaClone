@@ -20,7 +20,7 @@ class MasterClass(object):
     self.screen = screen
     
     # title screen
-    prefix = r'C:\Users\Offworld\Documents\GitHub\ZeldaClone' # raw string
+    prefix = r'[GAME_ROOT]' # raw string
     config = os.path.join(prefix, "config", "title.txt")
     self.title = ClassHolder(config)
     self.title.worldClass = TitleScreen()

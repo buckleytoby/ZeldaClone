@@ -78,10 +78,10 @@ class World(object):
     self.neighborMaps = [] #which maps are connected to this one
     self.edit=False #whether or not in edit mode
     
-  def loadTiles(self, imagefile, width, height):
+  def load_tiles(self, imagefile, width, height):
     #reads in image, resets tileArt, fills with tiles
     self.tileArt.clear()
-    
+
     image = pygame.image.load(imagefile).convert_alpha()
     imgw, imgh = image.get_size()
     for tiley in range(0,int(imgh/height)):

@@ -74,3 +74,12 @@ class PatchExt(m2d.geometry.Patch):
 		top    = property(get_top)
 		left   = property(get_left)
 		right  = property(get_right)
+
+def process_file_name(s1):
+	""" Process file name for os independence, as well as replace [GAME_ROOT] with the variable
+	"""
+	s2 = s1.replace("[GAME_ROOT]", "/")
+	s3 = s2.replace("\\", "/")
+	split = s3.split("/")
+	out = os.path.join(*split)
+	return out

@@ -1,7 +1,7 @@
 
 
-import os,sys,copy,random, math,time,pdb
-import Queue as queue
+import os, sys, copy, random, math, time, pdb
+import queue
 import pygame
 import math2d as m2d
 import numpy as np
@@ -9,6 +9,7 @@ import scipy.spatial as scSpatial
 from collections import defaultdict
 
 #globals
+GAME_ROOT = r"C:\Users\Toby\Documents\github\offworld\ZeldaClone"
 scrsize=[640.0, 480.0] #in pixels
 aspRatio=scrsize[1]/scrsize[0]
 screenTileWidth = 22 #turn pixels into tiles, number of tiles in the visible screen

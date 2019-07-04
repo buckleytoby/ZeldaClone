@@ -1,20 +1,20 @@
 [source]
 type=tiles
-C:\Users\Offworld\Documents\GitHub\ZeldaClone\art\tiles.png
+[GAME_ROOT]\art\tiles.png
 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 
 [end]
 
 [source]
 type=gameObjects
-C:\Users\Offworld\Documents\GitHub\ZeldaClone\art\gameObjects.png
+[GAME_ROOT]\art\gameObjects.png
 Player
 Soldier
 
 
 
 [INCL]
-C:\Users\Offworld\Documents\GitHub\ZeldaClone\maps\map2.txt
+[GAME_ROOT]\maps\map2.txt
 
 
 

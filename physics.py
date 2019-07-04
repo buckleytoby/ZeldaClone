@@ -110,8 +110,8 @@ class Physics(object):
     keys = gameObjects.keys()
 
     for c1, c2 in zip(i1, i2):
-      go1 = gameObjects[keys[c1]]
-      go2 = gameObjects[keys[c2]]
+      go1 = gameObjects[list(keys)[c1]]
+      go2 = gameObjects[list(keys)[c2]]
 
       # sanity check
       if go1.id == go2.id:
