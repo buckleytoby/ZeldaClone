@@ -192,7 +192,7 @@ class World(object):
       for j in range(self.screenLocationY, maxIDX_y):
         for gameObjectID in gameObjectsMap[i][j]:
           gameObject = gameObjects[gameObjectID]
-          if gameObject.hasSprite: gameObject.drawn = False
+          if gameObject.visible: gameObject.drawn = False
   
 
   
@@ -286,15 +286,24 @@ class World(object):
           self.low_draw_art(gameObject)
 
   def low_draw_art(self, go):
-    if go.hasSprite and go.drawn == False:
-      xpixel, ypixel = go.getArtPosition_pixels()
-      xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
-        #(self.screenLocationX, self.screenLocationY))
+    if go.visible and go.drawn == False:
+      if go.has_sprite:
+        xpixel, ypixel = go.getArtPosition_pixels()
+        xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
+          #(self.screenLocationX, self.screenLocationY))
 
-      spriteType = go.spriteType
-      spriteIndex = go.animation.getSpriteIndex()
-      sprite = self.objectArts[spriteType].getSprite(spriteIndex)
-      World.screen.blit(sprite, (xscreen, yscreen))
+        spriteType = go.spriteType
+        spriteIndex = go.animation.getSpriteIndex()
+        sprite = self.objectArts[spriteType].getSprite(spriteIndex)
+        World.screen.blit(sprite, (xscreen, yscreen))
+
+      else: # solid rect
+        rect = go.rect
+        rect_screen = rect.convert_to_screen_rect(self.screenLocation)
+        rect_pygame = rect_screen.convert_to_pygame_rect()
+        # World.screen.draw.filled_rect(rect_pygame, go.rgb)
+        pygame.draw.rect(World.screen, go.rgb, rect_pygame)
+      
       go.drawn = True
       
       

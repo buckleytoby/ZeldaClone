@@ -5,6 +5,8 @@ from world        import *
 from player       import *
 from gameObjects  import *
 from physics      import *
+from factory      import *
+from characters   import *
 
 
 
@@ -31,10 +33,42 @@ class ClassHolder(object):
     screenLocation = self.playerClass.screenClass.getLocation()
     screen_rect = self.playerClass.screenClass.rect
     self.worldClass.writeScreen(self.gameObjects, self.gameObjectsARR, screenLocation, screen_rect)
+
+  def update(self):
+    """ pop queue messages and perform the commands
+    queue objects must be tuples of form (cmd, obj)
+    valid commands:
+      GEN_OBJ
+      DEL_OBJ
+    """
+    valid_cmds = ["GEN_OBJ", "DEL_OBJ"]
+
+    while not MESSAGES.empty():
+      msg = MESSAGES.get()
+      cmd = msg[0]
+      # print(msg, cmd)
+      if cmd in valid_cmds:
+        fcn = getattr(self, cmd)
+        fcn(msg[1])
+
+  def GEN_OBJ(self, obj):
+    x = obj.x
+    y = obj.y
+
+    if False:
+      print("adding game object: {} at x: {} y: {}".format(type(obj), x, y))
+    self.add_game_object(x, y, obj)
+
+  def DEL_OBJ(self, obj):
+    self.remove_game_object(obj)
+    del obj
     
-  def addGameObject(self, x, y, object):
+  def add_game_object(self, x, y, object):
     self.gameObjects[object.id] = object
     self.gameObjectsARR[int(x)][int(y)].append(object.id)
+
+  def remove_game_object(self, obj):
+    del self.gameObjects[obj.id]
     
   def loadConfigFile(self):
     g=[]
@@ -98,7 +132,7 @@ class ClassHolder(object):
             x = float(f.parse_lines())
             y = float(f.parse_lines())
             object = factory.create(x, y)
-            self.addGameObject( object )
+            self.add_game_object( object )
             if line == 'Player':
                 self.playerClass.setGameObject(x, y, object)
           
@@ -134,7 +168,7 @@ class ClassHolder(object):
               #instantiate game object
               factory = self.factories[objType]
               object = factory.create(x, y)
-              self.addGameObject( x, y, object )
+              self.add_game_object( x, y, object )
               if objType == 'Player':
                 self.playerClass.setGameObject(object)
               

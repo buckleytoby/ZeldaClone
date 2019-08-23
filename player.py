@@ -1,6 +1,6 @@
 
 from config       import *
-from AI           import *
+import AI
 from utils        import *
 
 
@@ -42,10 +42,10 @@ class Keyboard(object):
                         pygame.K_ESCAPE: 'exit',
                         pygame.QUIT:     'exit',
                         pygame.K_e:      'edit',
-                        pygame.K_RSHIFT: 'attack',
+                        pygame.K_RCTRL: 'attack',
                         }
 
-  def getAction(self, key):
+  def get_action(self, key):
     if key in self.convertDict:
       #print(self.convertDict[key])
       return self.convertDict[key]
@@ -58,37 +58,31 @@ class Keyboard(object):
       if status[key]: actions.append(self.convertDict[key])
     return actions
 
-class Player(AI):
+class Player(AI.Basic):
   def __init__(self, *args, **kwargs):
     #default values
-    self.mass = 70.0 # kg
     self.gameObject = None
     self.screenClass = Screen()
     self.keyboard = Keyboard()
 
-    self.callbacks = {}
-    self.callbacks['attack'] = self.attack
-
-  def attack(self):
-    """ create damage object
-    """
-    
+    self.cbs_to_call = []
     
   def setGameObject(self, object):
     self.parent = object
     self.gameObject = object
     self.gameObject.objectType = 'Player'
     self.gameObject.spriteType = 'Player'
+
+    # over-ride AI
     self.gameObject.AI = self
     
   def update(self, events):
     #convert keyboard+mouse events into actions
     dx = 0; dy = 0
     actions = []
-    callCallbacks = []
     for event in events:
-      if event.type==pygame.KEYDOWN:
-        action = self.keyboard.getAction(event.key)
+      if event.type == pygame.KEYDOWN:
+        action = self.keyboard.get_action(event.key)
         if action not in actions:
           actions.append(action)
         if action is 'interact': pass
@@ -96,9 +90,9 @@ class Player(AI):
         if action is 'edit':
           #turn on edit mode
           print('edit mode')
-        if action is 'attack': callCallbacks.append(action)
+        if action is 'attack': self.cbs_to_call.append(action)
         
-      elif event.type==pygame.QUIT: sys.exit()
+      elif event.type == pygame.QUIT: sys.exit()
     # real-time events
     status = pygame.key.get_pressed()
     realTimeActions = self.keyboard.getRealTimeAction(status)
@@ -117,15 +111,15 @@ class Player(AI):
     self.dx = dx
     self.dy = dy
     self.dt = 0
-    # callbacks
-    for callback in callCallbacks:
-      self.callbacks[callback]()
     
     return actions
   
-  def getAction(self):
+  def get_action(self):
     out = {'dv': np.array([self.dx, self.dy])}
-    return out
+    cbs = self.cbs_to_call
+    # clear cbs
+    self.cbs_to_call = []
+    return out, cbs
     
     
     

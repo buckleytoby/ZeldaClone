@@ -43,8 +43,13 @@ class MasterClass(object):
   def update(self, seconds, events):
     """ update each part of the game's engine
     """
+    # update holder
+    self.holder.update()
     # update game with keyboard events
     actions = self.holder.playerClass.update(events)
+
+    # process actions
+    self.process_actions(actions)
 
     # update physics with time passage
     self.holder.physicsClass.update(seconds, self.holder.gameObjects, self.holder.worldClass, 'staticObjects')
@@ -54,29 +59,40 @@ class MasterClass(object):
 
     # add to data stream
     DATA["player_xy"] = self.holder.playerClass.position
-    
-    # check for high-level player actions
-    if 'interact' in actions and self.holder == self.title:
-      pass
-      # self.holder = self.main
-    
-    if 'exit' in actions:
-      # save & exit
-      sys.exit()
+    DATA["game_time"] = pygame.time.get_ticks() / 1000.0
     
   def writeScreen(self):
     """ write the user screen
     """
     self.holder.writeScreen()
+
+  def process_actions(self, actions):
+    """ process player actions
+    """
+    
+    if 'exit' in actions:
+      # save & exit
+      sys.exit()
+
+    if 'interact' in actions:
+      if self.holder == self.title:
+        pass
+        # self.holder = self.main
+
+    if 'use_object' in actions:
+      # if not in front of anything, use weapon
+      if True:
+        self.holder.playerClass.attack()
+
     
 
 
 
 
-clock=pygame.time.Clock()
-FPS=30
-seconds=0.0
-milli=0.0
+clock = pygame.time.Clock()
+FPS = 30
+seconds = 0.0
+milli = 0.0
 
 #init
 os.environ['SDL_VIDEO_WINDOW_POS'] = '800,50'
@@ -90,7 +106,7 @@ World.screen = screen
 # instantiate starting classes
 master = MasterClass(screen)
 
-ipics=0
+ipics = 0
 
 
 #main loop:

@@ -1,6 +1,7 @@
 
-
+import utils
 from config       import *
+import attack
 
 
 class Physics(object):
@@ -25,14 +26,18 @@ class Physics(object):
       gameObject = gameObjects[key]
 
       #gameObject.update(timeElapsed)
-      action = gameObject.AI.getAction()
+      action, cbs = gameObject.AI.get_action()
       vel_dict[gameObject.id] = np.zeros(2) #action['dv']
       dx, dy = action['dv']
       gameObject.dx = dx; gameObject.dy = dy
 
-      gameObject.animation.updateSprite(dx, dy)
       gameObject.x += dt * dx
       gameObject.y += dt * dy
+
+      # call cbs
+      for cb in cbs:
+        if cb in gameObject.callbacks:
+          gameObject.callbacks[cb](go=gameObject)
 
     # second, resolve all collisions with gameObjects
     vel_residual = self.collision_resolution(vel_dict, timeElapsed, gameObjects)
@@ -42,7 +47,7 @@ class Physics(object):
       gameObject = gameObjects[key]
 
       dx, dy = vel_residual[gameObject.id]
-      #gameObject.animation.updateSprite(dx, dy)
+
       gameObject.x += dt * dx
       gameObject.y += dt * dy
 
@@ -94,6 +99,9 @@ class Physics(object):
               else:
                 gameObject.y = yf
 
+          # real update
+      gameObject.update(timeElapsed)
+
   def collision_resolution(self, vel_dict, timeElapsed, gameObjects):
     """ take a potentially collision-filled map and resolve collisions
     such that no active object is in-collision
@@ -118,19 +126,38 @@ class Physics(object):
         continue
 
       if go1.intersect(go2):
-        # force field away from center-of-mass
-        dv1 = go2.com_vector(go1) * go2.mass / 30.0
-        dv2 = go1.com_vector(go2) * go1.mass / 30.0
+        # resolve if damage-object
+        if isinstance(go1, attack.DamageObj):
+          self.damage(do=go1, go=go2)
+        if isinstance(go2, attack.DamageObj):
+            self.damage(do=go2, go=go1)
 
-        # TODO: calculate required dv to align rect edges
+        # resolve if game-objects are moveable
+        if go1.moveable and go2.moveable:
+          # force field away from center-of-mass
+          dv1 = go2.com_vector(go1) * go2.mass / 30.0
+          dv2 = go1.com_vector(go2) * go1.mass / 30.0
 
-        # calculate momentum and rebound, scaled by friction
-        dv1 += go2.momentum * go2.unit_velocity / go1.mass * go1.friction # array
-        dv2 += go1.momentum * go1.unit_velocity / go2.mass * go2.friction # array
-        #
+          # TODO: calculate required dv to align rect edges
 
-        # add to vel arr
-        vel_dict[go1.id] += dv1
-        vel_dict[go2.id] += dv2
+          # calculate momentum and rebound, scaled by friction
+          dv1 += go2.momentum * go2.unit_velocity / go1.mass * go1.friction # array
+          dv2 += go1.momentum * go1.unit_velocity / go2.mass * go2.friction # array
+          #
+
+          # add to vel arr
+          vel_dict[go1.id] += dv1
+          vel_dict[go2.id] += dv2
     
     return vel_dict
+
+  def damage(self, do=None, go=None):
+    """ apply damage to game object
+    do: damage-object
+    go: game-object to take damage
+    """
+    # friendly-fire off
+    if not do.parent_id == go.id:
+      # confirm go can take damage
+      if hasattr(go, "attacker"):
+        go.attacker.receive_damage(go, do.power)

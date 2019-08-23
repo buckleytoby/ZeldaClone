@@ -1,77 +1,9 @@
 
 from config       import *
-from AI           import *
+import AI
 from utils        import *
 
 
-class Factory(object):
-  # generic factory class
-  def __init__(self, creator):
-    self.creator = creator
-    self.values = {}
-    
-  def create(self):
-    created = self.creator()
-    # set the values
-    for key in self.values:
-      try:
-        setattr(created, key, self.values[key]) #equivalent to self.{key} = value
-      except:
-        pdb.set_trace()
-    
-    return created
-
-
-class GameObjectFactory(Factory):
-  # factory class for creating game objects
-  def __init__(self):
-    super(GameObjectFactory, self).__init__(GameObject) #check syntax
-    
-  def create(self, x, y):
-    self.values['x'] = x
-    self.values['y'] = y
-    self.values['old_x'] = x
-    self.values['old_y'] = y
-    created = super(GameObjectFactory, self).create()
-    return created
-  
-  
-class SoldierFactory(GameObjectFactory):
-  def __init__(self):
-    super(SoldierFactory, self).__init__()
-    self.values['width']      = 1.0
-    self.values['height']     = 1.0
-    self.values['artWidth']      = 1.0 * 2
-    self.values['artHeight']     = 1.5 * 2
-    self.values['mass']       = 100.0 # kg
-    self.values['pixelWidth'] = 16 # size of the sprite image
-    self.values['pixelHeight'] = 24 # size of the sprite image
-    self.values['max_velocity'] = 2.0 #m/s
-    self.values['objectType'] = 'Soldier'
-    self.values['attack'] = self.attack
-
-  
-  def create(self, x, y):
-    object = super(SoldierFactory, self).create(x, y)
-    # callbacks
-    getattr(object, 'callbacks')['attack'] = self.attack #unbound, but should be ok
-    # setup
-    object.setSpriteStatus(True, 'Soldier')
-    return object
-  
-  def attack(self):
-    pass
-
-class PlayerFactory(SoldierFactory):
-  def __init__(self):
-    super(PlayerFactory, self).__init__()
-    self.values['max_velocity'] = 6.0 #m/s
-    self.values['artWidth']      = 1.0
-    self.values['artHeight']     = 1.5
-  
-  
-  
-  
 class Animation(object):
   left = 0
   down = 1
@@ -113,7 +45,7 @@ class GameObject(object):
   # class for any objects found in the game, 
   # basically if it has a hitbox, it's a game object
   id = -1
-  def __init__(self):
+  def __init__(self, **kwargs):
     GameObject.id += 1
     self.id = GameObject.id
     #-------------- default values --------------
@@ -121,19 +53,21 @@ class GameObject(object):
     self.drawHitBox = False
     self.x = 0.0
     self.y = 0.0
-    self.old_x = 0.0
-    self.old_y = 0.0
     self.dx = 0.0
     self.dy = 0.0
     self.dx_actual = 0.0
     self.dy_actual = 0.0
     self.width = 0.0
     self.height = 0.0
+    self.heading = 0.0 # from 0 to 2pi
     # physics
+    self.moveable = True
     self.mass = 70.0
     self.friction = 0.01
     # visuals
-    self.hasSprite = False #False --> invisible box
+    self.visible = False
+    self.has_sprite = False #False --> rect
+    self.rgb = (0, 200, 0)
     self.drawn = False
     self.spriteID = 0
     self.animation  = None
@@ -143,16 +77,30 @@ class GameObject(object):
     self.artYOffset = 0.0
     #------------------------------------------
     # intelligence
-    self.AI = AI(self)
+    self.AI = AI.Basic(self)
     self.callbacks = {}
+
+    # instantiate from rect
+    if "rect" in kwargs:
+      rect = kwargs.pop("rect")
+      kwargs["x"] = rect.x
+      kwargs["y"] = rect.y
+      kwargs["width"] = rect.width
+      kwargs["height"] = rect.height
+    # over-ride default values
+    self.__dict__.update(kwargs)
+    self.old_x = self.x
+    self.old_y = self.y
     
-  def setSpriteStatus(self, hasSprite=False, spriteType=None):
-    if hasSprite:
-      self.hasSprite = True
-      self.spriteType = spriteType
-      self.animation = Animation()
+  def setSpriteStatus(self, visible, has_sprite=False, spriteType=None):
+    if visible:
+      self.visible = True
+      if has_sprite:
+        self.has_sprite = True
+        self.spriteType = spriteType
+        self.animation = Animation()
     else:
-      self.hasSprite = False
+      self.visible = False
       del self.animation; self.animation = None
 
   def gen_art_frame(self):
@@ -182,6 +130,9 @@ class GameObject(object):
     pixelY = int(artY*pixelsPerTileHeight)
     return (pixelX, pixelY)
 
+  def update_heading(self, dy, dx):
+    self.heading = np.arctan2(dy, dx)
+
   def update(self, seconds):
     # update actual movement
     self.dx_actual = self.x - self.old_x
@@ -189,9 +140,23 @@ class GameObject(object):
     self.old_x = self.x
     self.old_y = self.y
 
+    if self.dx_actual != 0.0 or self.dy_actual != 0.0:
+      self.update_heading(self.dy_actual, self.dx_actual)
+
+    if self.has_sprite:
+      self.animation.updateSprite(self.dx_actual, self.dy_actual)
+
   def get_position(self):
     return np.array([self.x, self.y])
   position = property(get_position)
+
+  def get_center(self):
+    return np.array([self.x + 0.5 * self.width, self.y + 0.5 * self.height])
+
+  def get_center_tf(self):
+    pos = self.get_center()
+    tf = m2d.Transform(self.heading, pos)
+    return tf
 
   def get_overlap_tiles(self):
     """ get all tile indices which overlap in the form out = [[idx_x1, idx_y1], ..., [idx_xn, idx_yn]]
@@ -201,7 +166,10 @@ class GameObject(object):
     xmax = int(np.ceil(rect.right) + 1)
     ymin = int(np.floor(rect.top))
     ymax = int(np.ceil(rect.bottom) + 1)
-    X, Y = np.mgrid[xmin:xmax:1, ymin:ymax:1]
+    try:
+      X, Y = np.mgrid[xmin:xmax:1, ymin:ymax:1]
+    except:
+      pdb.set_trace()
     indices = np.vstack([X.ravel(), Y.ravel()]).T
     return indices
 
@@ -241,7 +209,7 @@ class GameObject(object):
   def intersect(self, other, art=False):
     """ intersect with other, other can be an object which contains rect, or a Patch directly
     """
-    if art:
+    if art and self.has_sprite:
       if isinstance(other, PatchExt): out = self.rect_art.intersect(other)
       else: out = self.rect_art.intersect(other.rect_art)
     else:
@@ -283,5 +251,3 @@ class GameObject(object):
     # final - initial == 'to' - 'from'
     out = np.array(other.center_of_mass) - np.array(self.center_of_mass) 
     return out
-    
-  

@@ -1,6 +1,7 @@
 
 
 from config       import *
+import threading
 
 
 class AttackModule(object):
@@ -18,10 +19,7 @@ class AttackModule(object):
 
 
 
-
-
-class AI(object):
-
+class Basic(object):
   def __init__(self, parent):
     self.parent = parent
     self.dx = 0.0
@@ -32,16 +30,63 @@ class AI(object):
     return out
   position = property(get_position)
   
-  def getAction(self):
+  def get_action(self):
+    """ non-action base function """
     dv = np.zeros(2)
+    out = {'dv': dv}
+    cbs = []
+    return out, cbs
+
+class Follower(Basic):
+  """ follows the player """
+  def __init__(self, *args):
+    super().__init__(*args)
+    self.dist_threshold = 2.0
+
+  def get_dv(self):
+    dv = np.zeros(2)
+    dist = 0.0
     me = self.position
     if 'player_xy' in DATA:
       target = np.array(DATA['player_xy'])
       vector = target - me
-      if not np.allclose(vector, np.zeros(2)):
+      dist = np.linalg.norm(vector)
+      if  dist > self.dist_threshold:
         unit_direction = vector / np.linalg.norm(vector)
         dv = self.parent.max_velocity * unit_direction
 
+    return dv, dist
+
+  def get_action(self):
+    dv, dist = self.get_dv()
     out = {'dv': dv}
-    # out = {'dv': np.array([self.dx, self.dy])}
-    return out
+    cbs = []
+    return out, cbs
+
+class Basic_Attacker(Follower):
+  """ follows the player and attacks when near """
+  def __init__(self, *args):
+    super().__init__(*args)
+    self.wait = False
+    self.cooldown = 2.0
+    self.dist_threshold = 1.5
+
+  def reset_wait(self):
+    self.wait = False
+
+  def get_action(self):
+    cbs = []
+    dv, dist = self.get_dv()
+
+    if self.wait:
+      out = {'dv': np.zeros(2)}
+    else:
+      out = {'dv': dv}
+      # attack if close enough
+      if dist < self.dist_threshold:
+        cbs.append("attack")
+
+        # trigger cool-down
+        threading.Timer(self.cooldown, self.reset_wait).start()
+
+    return out, cbs

@@ -7,10 +7,11 @@ import math2d as m2d
 import numpy as np
 import scipy.spatial as scSpatial
 from collections import defaultdict
+from threading import Thread
 
 #globals
 GAME_ROOT = r"C:\Users\Toby\Documents\github\offworld\ZeldaClone"
-scrsize=[640.0, 480.0] #in pixels
+scrsize=[1280.0, 960.0] #in pixels
 aspRatio=scrsize[1]/scrsize[0]
 screenTileWidth = 22 #turn pixels into tiles, number of tiles in the visible screen
 screenTileHeight = int(screenTileWidth*aspRatio)
@@ -22,3 +23,6 @@ psuedoPixelsPerTileHeight = int(pixelsPerTileHeight/16)
 
 # global data-stream for sensing and w/e
 DATA = {}
+
+# global queue for messages & commands
+MESSAGES = queue.Queue()
