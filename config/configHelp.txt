@@ -10,3 +10,9 @@ x
 y
 [end]
 
+[source]
+type=childGameObjects
+child_name0 parent_name0
+child_name1 parent_name1
+...
+[end]

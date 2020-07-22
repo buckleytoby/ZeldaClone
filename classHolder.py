@@ -20,12 +20,17 @@ class ClassHolder(object):
     # game objects dict
     self.gameObjects = {}
     self.gameObjectsARR = []
-    #factories
-    soldier_factory = SoldierFactory()
-    player_factory = PlayerFactory()
+
+    # add to data
+    DATA["game_objects_ref"] = self.gameObjects
+
     # group the factories
-    self.factories = {'Soldier': soldier_factory,
-                 'Player':  player_factory}
+    self.factories = {'Soldier': SoldierFactory(),
+                 'Player':  PlayerFactory(),
+                 'MiniSoldier': MiniSoldierFactory(),
+                 'MegaSoldier': MegaSoldierFactory(),
+                 "Archer": ArcherFactory(),
+                  }
 
     
     
@@ -98,8 +103,10 @@ class ClassHolder(object):
         if type == 'gameObjects':
           name = f.parse_lines()
           file_name = process_file_name(name)
-          #height = 
           self.worldClass.loadGameObjects(file_name, f, self.factories)
+
+        elif type == 'childGameObjects':
+          self.worldClass.load_child_objects(f, self.factories)
       
         elif type == 'tiles':
           line = f.parse_lines()
@@ -165,6 +172,12 @@ class ClassHolder(object):
                 objType = 'Player'
               elif objInd == 1:
                 objType = 'Soldier'
+              elif objInd == 2:
+                objType = 'MiniSoldier'
+              elif objInd == 3:
+                objType = 'MegaSoldier'
+              elif objInd == 4:
+                objType = 'Archer'
               #instantiate game object
               factory = self.factories[objType]
               object = factory.create(x, y)

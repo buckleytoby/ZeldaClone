@@ -8,6 +8,7 @@ from gameObjects  import *
 from physics      import *
 from classHolder  import *
 from AI           import *
+import weapons
 
     
     
@@ -38,7 +39,14 @@ class MasterClass(object):
                     self.main]
                     
     # set initial holder
-    self.holder = self.title
+    self.set_holder(self.title)
+
+  def set_holder(self, holder):
+    """ update holder, and update DATA """
+    self.holder = holder
+    DATA["game_objects_ref"] = self.holder.gameObjects
+    print("# game objects: {}".format(len(DATA["game_objects_ref"]))) # DEBUG
+    DATA["player_xy"] = self.holder.playerClass.gameObject.center_of_mass
       
   def update(self, seconds, events):
     """ update each part of the game's engine
@@ -79,10 +87,12 @@ class MasterClass(object):
         pass
         # self.holder = self.main
 
+      # switch weapon
+      self.holder.playerClass.next_weapon()
+      print("Switched to: {}".format( self.holder.playerClass.gameObject.attacker.weapon.name ) )
+
     if 'use_object' in actions:
-      # if not in front of anything, use weapon
-      if True:
-        self.holder.playerClass.attack()
+      pass
 
     
 
@@ -95,7 +105,8 @@ seconds = 0.0
 milli = 0.0
 
 #init
-os.environ['SDL_VIDEO_WINDOW_POS'] = '800,50'
+# os.environ['SDL_VIDEO_WINDOW_POS'] = '800,50'
+os.environ['SDL_VIDEO_CENTERED'] = '1'
 pygame.init()
 #logo=pygame.image.load("logo filename")
 #pygame.display.set_icon(logo)

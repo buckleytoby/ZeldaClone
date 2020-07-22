@@ -8,7 +8,15 @@
             "name": "Python: ZeldaClone",
             "type": "python",
             "request": "launch",
-            "module": "main.py"
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "host": "localhost",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "."
+                }
+            ]
         },
         {
             "name": "Python: Current File (Integrated Terminal)",

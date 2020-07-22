@@ -93,7 +93,7 @@ class World(object):
         self.tileArt.addTile(tile)
         
   def loadGameObjects(self, imagefile, f, factories): #height/width of tiles
-    #reads in image, resets, fills with sprites
+    # reads in image, resets, fills with sprites
     # input: 'f' is the file object which specifies names of game objects
     self.objectArts.clear()
     image = pygame.image.load(imagefile).convert_alpha()
@@ -115,15 +115,48 @@ class World(object):
       tileHeight  = factories[objectType].values['artHeight']
       tiley = 0
       while tiley*pixelHeight < imgh:
-        rect=(tilex*pixelWidth, tiley*pixelHeight, pixelWidth, pixelHeight)
+        rect = (tilex * pixelWidth, tiley * pixelHeight, pixelWidth, pixelHeight)
         tile = image.subsurface(rect)
-        tile = pygame.transform.scale(tile,(int(tileWidth*pixelsPerTileWidth), 
-                int(tileHeight*pixelsPerTileHeight)))
+        tile = pygame.transform.scale(tile, (int(tileWidth * pixelsPerTileWidth), 
+                int(tileHeight * pixelsPerTileHeight)))
         spriteRow.append(tile)
         tiley += 1
       tilex += 1 
       pixelCount += pixelWidth
       self.objectArts[objectType].setData(spriteRow)
+
+  def load_child_objects(self, f, factories): #height/width of tiles
+    line = ""
+
+    while line != '[end]':
+      line = f.parse_lines()
+      # if single entry, then objectType and parentType are the same
+      split = line.split(" ")
+      if line == '[end]':
+        break
+      elif len(split) == 2:
+        objectType = split[0]
+        parentType = split[1]
+      else:
+        print("Unknown input: {}".format(line))
+        continue
+
+      self.objectArts[objectType] = ObjectArt()
+      tileWidth   = factories[objectType].values['artWidth']
+      tileHeight  = factories[objectType].values['artHeight']
+
+      parent_tile_width = factories[parentType].values['artWidth']
+      parent_tile_height = factories[parentType].values['artHeight']
+
+      spriteRow=[]
+      for tile in self.objectArts[parentType].data:
+        tile = pygame.transform.scale(tile, (int(tileWidth / parent_tile_width * pixelsPerTileWidth), 
+                int(tileHeight / parent_tile_height * pixelsPerTileHeight)))
+        spriteRow.append(tile)
+        
+      print("Setting {} art from {}.".format(objectType, parentType))
+      self.objectArts[objectType].setData(spriteRow)
+
     
   def setMap(self, mapType, data):
     #require all maps to be numpy arrays
@@ -257,7 +290,7 @@ class World(object):
     ###self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
 
 
-    for key in gameObjects:
+    for key in gameObjects: 
       go = gameObjects[key]
       go.drawn = False
       if go.intersect(screen_rect, art=True):
@@ -292,9 +325,9 @@ class World(object):
         xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
           #(self.screenLocationX, self.screenLocationY))
 
-        spriteType = go.spriteType
+        objectType = go.objectType
         spriteIndex = go.animation.getSpriteIndex()
-        sprite = self.objectArts[spriteType].getSprite(spriteIndex)
+        sprite = self.objectArts[objectType].getSprite(spriteIndex)
         World.screen.blit(sprite, (xscreen, yscreen))
 
       else: # solid rect

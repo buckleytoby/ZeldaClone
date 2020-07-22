@@ -22,6 +22,7 @@ class DamageObj(gameObjects.GameObject):
         self._done = False
 
         kwargs["moveable"] = False
+        kwargs["type"] = "damage"
         super().__init__(**kwargs)
 
         #
@@ -56,6 +57,7 @@ class DamageObj(gameObjects.GameObject):
             # exit condition
             tt = get_game_time()
             if (tt - t0) > self.duration:
+                # print("dt: {}".format(tt-t0))
                 self.set_done()
 
         # self-destruct
@@ -71,12 +73,15 @@ class Attacker(object):
     """ Attack Module Class. Held by game-object """
     def __init__(self, weapon):
         # weapon factory
-        self.weapon = weapon
+        self.change_weapon(weapon)
         self.health = 100.0
         self.disabled = False # whether can attack
         self.invincible = False # whether can get hit
         self.invincible_cooldown = 1.0
-        self.attack_cooldown = 0.6
+
+    def change_weapon(self, weapon):
+        self.weapon = weapon
+        self.attack_cooldown = self.weapon.cooldown
 
     def attack(self, **kwargs):
         if not self.disabled:
@@ -100,6 +105,7 @@ class Attacker(object):
         self.disabled = False
 
     def receive_damage(self, go, power):
+        """ return True if damage was received """
         if not self.invincible:
             self.health -= power
             print("Hit {} with {} health left".format(go.objectType, self.health))
@@ -112,3 +118,7 @@ class Attacker(object):
             self.invincible_cooldowner()
 
             # generate effects
+
+            return True
+        else:
+            return False

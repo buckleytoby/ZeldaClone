@@ -11,6 +11,12 @@ type=gameObjects
 Player
 Soldier
 
+[source]
+type=childGameObjects
+MiniSoldier Soldier
+MegaSoldier Soldier
+Archer Soldier
+[end]
 
 
 [INCL]

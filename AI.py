@@ -2,22 +2,9 @@
 
 from config       import *
 import threading
-
-
-class AttackModule(object):
-
-
-  def attack(self):
-    face = self.animation.face
-    attackBox = self.getAttackBox(face)
-    enemiesInBox = self.queryGameObjects(attackBox)
-    for ID in enemiesInBox:
-    	self.gameObjects[ID].health -= self.power
-    	vector = self.gameObjects[ID].position - self.position
-    	knockbackVector = vector * self.knockback
-    	self.gameObjects[ID].position -= knockbackVector
-
-
+import attack
+import utils
+import math_utils
 
 class Basic(object):
   def __init__(self, parent):
@@ -41,19 +28,26 @@ class Follower(Basic):
   """ follows the player """
   def __init__(self, *args):
     super().__init__(*args)
-    self.dist_threshold = 2.0
+    self.attack_threshold = 2.0
+    self.max_dist_threshold = 7.5
 
-  def get_dv(self):
-    dv = np.zeros(2)
-    dist = 0.0
+  def get_dir_to_move(self):
+    dist = 9999.0
+    unit_direction = np.zeros(2)
     me = self.position
     if 'player_xy' in DATA:
       target = np.array(DATA['player_xy'])
       vector = target - me
       dist = np.linalg.norm(vector)
-      if  dist > self.dist_threshold:
-        unit_direction = vector / np.linalg.norm(vector)
-        dv = self.parent.max_velocity * unit_direction
+      if  dist > self.attack_threshold and dist < self.max_dist_threshold:
+        unit_direction = math_utils.zero_protection_divide(vector, np.linalg.norm(vector))
+    return unit_direction, dist
+
+  def get_dv(self):
+    dv = np.zeros(2)
+    unit_direction, dist = self.get_dir_to_move()
+    if not np.allclose(unit_direction, 0.0):
+      dv = self.parent.max_velocity * unit_direction
 
     return dv, dist
 
@@ -90,3 +84,86 @@ class Basic_Attacker(Follower):
         threading.Timer(self.cooldown, self.reset_wait).start()
 
     return out, cbs
+
+class Avoider(Basic):
+  def __init__(self, *args):
+    super().__init__(*args)
+    self.dist_tol = 5.0
+    self.dist_multiplier = 1.0
+    self.dist_threshold = 1.5
+
+  def get_avoid_dir(self):
+    direction = np.zeros(2)
+
+    # force-field away from incoming attacks
+    gos = utils.get_game_objects()
+    for key in gos:
+      go = gos[key]
+      # different team
+      if go.team_id != self.parent.team_id:
+        # calc dist to parent
+        com_vector = go.com_vector(self.parent)
+        dist_to_dmg = go.dist_to_other(self.parent)
+
+        if dist_to_dmg > self.dist_tol:
+          continue
+        else:
+          # normalize, inversely proportional 
+          mult = np.clip( math_utils.zero_protection_divide(self.dist_multiplier, dist_to_dmg), -1.0, 1.0)
+          direction += mult * math_utils.normalize(com_vector)
+          # print("direction: {}".format(direction))
+
+    out = math_utils.normalize(direction)
+    return out
+    
+  def get_dv(self):
+    dv = np.zeros(2)
+    unit_direction = self.get_avoid_dir()
+    if not np.allclose(unit_direction, 0.0):
+      dv = self.parent.max_velocity * unit_direction
+    return dv
+
+  def get_action(self):
+    dv = self.get_dv()
+    out = {'dv': dv}
+    cbs = []
+    return out, cbs
+
+class AvoiderAttacker(Basic_Attacker, Avoider):
+  """ follows the player while avoiding attacks """
+
+  def get_dir_to_move(self):
+    """ from game-objects handle, get CG of all attacks
+
+    """
+    direction, dist = super().get_dir_to_move()
+    direction += self.get_avoid_dir()
+    unit_direction = math_utils.normalize(direction)
+    return unit_direction, dist
+
+    
+class DmgAvoiderAttacker(AvoiderAttacker):
+
+  def get_avoid_dir(self):
+    direction = np.zeros(2)
+
+    # force-field away from incoming attacks
+    gos = utils.get_game_objects()
+    for key in gos:
+      go = gos[key]
+      # different team
+      if go.type == "damage" and go.team_id != self.parent.team_id:
+        # calc dist to parent
+        com_vector = go.com_vector(self.parent)
+        dist_to_dmg = go.dist_to_other(self.parent)
+
+        if dist_to_dmg > self.dist_tol:
+          continue
+        else:
+          # normalize, inversely proportional 
+          mult = np.clip( math_utils.zero_protection_divide(self.dist_multiplier, dist_to_dmg), -1.0, 1.0)
+          direction += mult * math_utils.normalize(com_vector)
+          # print("direction: {}".format(direction))
+
+    out = math_utils.normalize(direction)
+    return out

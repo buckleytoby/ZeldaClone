@@ -2,6 +2,8 @@
 from config       import *
 import AI
 from utils        import *
+import weapons
+import math_utils
 
 
 class Screen(object):
@@ -58,20 +60,60 @@ class Keyboard(object):
       if status[key]: actions.append(self.convertDict[key])
     return actions
 
+class Logitech():
+  A = 0
+  LB = 4
+  RB = 5
+
+class Joystick(Keyboard):
+  def __init__(self):
+    pygame.joystick.init()
+    self.joystick = pygame.joystick.Joystick(0)
+    self.joystick.init()
+
+    self.convertDict = {Logitech.A:  '',
+                        Logitech.LB:     'attack',
+                        Logitech.RB:  'interact',
+                        }
+
+    self.action_to_button = dict([[v,k] for k,v in self.convertDict.items()])
+
+  def continuous_attack(self):
+    if self.joystick.get_button(self.action_to_button["attack"]):
+      return True
+
+  def get_direction(self):
+    """ axis 0 and 1, already normalized from [-1.0, 1.0]
+    """
+    xdir = self.joystick.get_axis(0)
+    ydir = self.joystick.get_axis(1)
+    #
+    dir = np.array([xdir, ydir])
+    dir[np.abs(dir) < 0.1] = 0.0
+    return dir
+
+
 class Player(AI.Basic):
   def __init__(self, *args, **kwargs):
     #default values
     self.gameObject = None
     self.screenClass = Screen()
     self.keyboard = Keyboard()
+    self.joystick = Joystick()
+    self.weapon_idx = 1
+    self.use_joystick = True
 
     self.cbs_to_call = []
+
+  def next_weapon(self):
+      self.weapon_idx += 1
+      self.weapon_idx %= len(weapons.weapons_list)
+      self.gameObject.attacker.change_weapon( weapons.weapons_list[self.weapon_idx] )
     
   def setGameObject(self, object):
     self.parent = object
     self.gameObject = object
     self.gameObject.objectType = 'Player'
-    self.gameObject.spriteType = 'Player'
 
     # over-ride AI
     self.gameObject.AI = self
@@ -83,31 +125,47 @@ class Player(AI.Basic):
     for event in events:
       if event.type == pygame.KEYDOWN:
         action = self.keyboard.get_action(event.key)
-        if action not in actions:
-          actions.append(action)
-        if action is 'interact': pass
-        if action is 'exit':     pass
-        if action is 'edit':
-          #turn on edit mode
-          print('edit mode')
-        if action is 'attack': self.cbs_to_call.append(action)
+      elif event.type == pygame.JOYBUTTONDOWN:
+        # with members: joy (which joystick), button
+        action = self.joystick.get_action(event.button)
+      else:
+        action = ""
+      #
+      if action not in actions:
+        actions.append(action)
+      if action is 'interact': pass
+      if action is 'exit':     sys.exit()
+      if action is 'edit':
+        #turn on edit mode
+        print('edit mode')
+      if action is 'attack': self.cbs_to_call.append(action)
         
-      elif event.type == pygame.QUIT: sys.exit()
     # real-time events
     status = pygame.key.get_pressed()
-    realTimeActions = self.keyboard.getRealTimeAction(status)
-    for realTimeActions in realTimeActions:
-      if realTimeActions is 'left':  dx -= 1
-      if realTimeActions is 'right': dx += 1
-      if realTimeActions is 'up':    dy -= 1
-      if realTimeActions is 'down':  dy += 1
+    if self.use_joystick:
+      movement = self.joystick.get_direction()
+      # scale by squaring, for more sensitivity at smaller joystick values
+      movement = np.multiply(movement, np.abs(movement))
+      dx = movement[0]
+      dy = movement[1]
+
+      # continuous weapon
+      if self.gameObject.attacker.weapon.is_continuous and "attack" not in self.cbs_to_call:
+        if self.joystick.continuous_attack(): self.cbs_to_call.append("attack")
+    else:
+      realTimeActions = self.keyboard.getRealTimeAction(status)
+      for aa in realTimeActions:
+        if aa == 'left':  dx -= 1
+        if aa == 'right': dx += 1
+        if aa == 'up':    dy -= 1
+        if aa == 'down':  dy += 1
+      if abs(dx) > 0.0 and abs(dy) > 0.0: #moving diagonally
+        dx *= 0.707106
+        dy *= 0.707106
       
-    # movement
-    dx *= round(self.gameObject.max_velocity)
-    dy *= round(self.gameObject.max_velocity)
-    if abs(dx) > 0.0 and abs(dy) > 0.0: #moving diagonally
-      dx *= 0.707106
-      dy *= 0.707106
+    # scale to max velocity
+    dx *= self.gameObject.max_velocity
+    dy *= self.gameObject.max_velocity
     self.dx = dx
     self.dy = dy
     self.dt = 0

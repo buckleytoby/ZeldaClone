@@ -149,6 +149,9 @@ def die(obj):
 def get_game_time():
     return DATA["game_time"]
 
+def get_game_objects():
+    return DATA["game_objects_ref"]
+
 def center_to_limits(input):
     center, size = np.array(input[0]), np.array(input[1])
     low = center - 0.5 * size

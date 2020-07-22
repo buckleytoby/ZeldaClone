@@ -17,6 +17,11 @@ class Physics(object):
     self.gameObjectsARR = None
       
   def update(self, timeElapsed, gameObjects, worldClass, mapType):
+    """ 
+    Step 1: everybody moves
+    Step 2: resolve all collisions
+    Step 3: static-object collision prevention
+    """
     dt = timeElapsed
     
     vel_dict = {}
@@ -29,6 +34,13 @@ class Physics(object):
       action, cbs = gameObject.AI.get_action()
       vel_dict[gameObject.id] = np.zeros(2) #action['dv']
       dx, dy = action['dv']
+
+      # add on pre-existing momentum, deteriorated by friction
+      dv = 5. * ( gameObject.momentum / gameObject.mass) * gameObject.unit_velocity
+
+      dx += dv[0]
+      dy += dv[1]
+
       gameObject.dx = dx; gameObject.dy = dy
 
       gameObject.x += dt * dx
@@ -102,6 +114,20 @@ class Physics(object):
           # real update
       gameObject.update(timeElapsed)
 
+  def momentum_trade(self, go1, go2):
+    """ momentum (represented as delta-v) imparted ON go2 BY go1
+    """
+
+    # force field away from center-of-mass
+    dv2 = go1.com_vector(go2) * go1.mass / 30.0
+
+    # TODO: calculate required dv to align rect edges
+
+    # calculate momentum and rebound, scaled by friction
+    dv2 += go1.momentum * go1.unit_velocity / go2.mass * go2.friction # array
+    
+    return dv2
+
   def collision_resolution(self, vel_dict, timeElapsed, gameObjects):
     """ take a potentially collision-filled map and resolve collisions
     such that no active object is in-collision
@@ -126,28 +152,24 @@ class Physics(object):
         continue
 
       if go1.intersect(go2):
+        dv1 = 0.0
+        dv2 = 0.0
+
         # resolve if damage-object
         if isinstance(go1, attack.DamageObj):
-          self.damage(do=go1, go=go2)
+          # go1 is imparting damage on go2, therefore go2 receives delta-v
+          dv2 += self.damage(do=go1, go=go2)
         if isinstance(go2, attack.DamageObj):
-            self.damage(do=go2, go=go1)
+          dv1 += self.damage(do=go2, go=go1)
 
         # resolve if game-objects are moveable
         if go1.moveable and go2.moveable:
-          # force field away from center-of-mass
-          dv1 = go2.com_vector(go1) * go2.mass / 30.0
-          dv2 = go1.com_vector(go2) * go1.mass / 30.0
+          dv1 += self.momentum_trade(go2, go1)
+          dv2 += self.momentum_trade(go1, go2)
 
-          # TODO: calculate required dv to align rect edges
-
-          # calculate momentum and rebound, scaled by friction
-          dv1 += go2.momentum * go2.unit_velocity / go1.mass * go1.friction # array
-          dv2 += go1.momentum * go1.unit_velocity / go2.mass * go2.friction # array
-          #
-
-          # add to vel arr
-          vel_dict[go1.id] += dv1
-          vel_dict[go2.id] += dv2
+        # add to vel arr
+        vel_dict[go1.id] += dv1
+        vel_dict[go2.id] += dv2
     
     return vel_dict
 
@@ -156,8 +178,17 @@ class Physics(object):
     do: damage-object
     go: game-object to take damage
     """
+    dv = 0.0
     # friendly-fire off
-    if not do.parent_id == go.id:
+    if not do.team_id == go.team_id:
       # confirm go can take damage
       if hasattr(go, "attacker"):
-        go.attacker.receive_damage(go, do.power)
+        hit = go.attacker.receive_damage(go, do.power)
+
+        # blowback
+        if hit:
+          dv = self.momentum_trade(do, go)
+        # print("dv: {}".format(dv))
+
+    return dv
+

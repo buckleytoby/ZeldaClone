@@ -11,7 +11,7 @@ from threading import Thread
 
 #globals
 GAME_ROOT = r"C:\Users\Toby\Documents\github\offworld\ZeldaClone"
-scrsize=[1280.0, 960.0] #in pixels
+scrsize=[640.0, 480.0] #in pixels
 aspRatio=scrsize[1]/scrsize[0]
 screenTileWidth = 22 #turn pixels into tiles, number of tiles in the visible screen
 screenTileHeight = int(screenTileWidth*aspRatio)
@@ -22,7 +22,13 @@ psuedoPixelsPerTileHeight = int(pixelsPerTileHeight/16)
 
 
 # global data-stream for sensing and w/e
+"""
+game_time
+game_objects_ref
+player_xy
+"""
 DATA = {}
+DATA["game_time"] = 0.0
 
 # global queue for messages & commands
 MESSAGES = queue.Queue()

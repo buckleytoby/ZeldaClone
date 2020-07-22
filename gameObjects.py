@@ -1,6 +1,7 @@
 
 from config       import *
 import AI
+import math_utils
 from utils        import *
 
 
@@ -48,6 +49,7 @@ class GameObject(object):
   def __init__(self, **kwargs):
     GameObject.id += 1
     self.id = GameObject.id
+    self.type = "game_object"
     #-------------- default values --------------
     # hitbox
     self.drawHitBox = False
@@ -78,6 +80,7 @@ class GameObject(object):
     #------------------------------------------
     # intelligence
     self.AI = AI.Basic(self)
+    self.team_id = 0
     self.callbacks = {}
 
     # instantiate from rect
@@ -87,17 +90,18 @@ class GameObject(object):
       kwargs["y"] = rect.y
       kwargs["width"] = rect.width
       kwargs["height"] = rect.height
+      
+    #------------------------------------------
     # over-ride default values
     self.__dict__.update(kwargs)
     self.old_x = self.x
     self.old_y = self.y
     
-  def setSpriteStatus(self, visible, has_sprite=False, spriteType=None):
+  def setSpriteStatus(self, visible, has_sprite=False):
     if visible:
       self.visible = True
       if has_sprite:
         self.has_sprite = True
-        self.spriteType = spriteType
         self.animation = Animation()
     else:
       self.visible = False
@@ -137,6 +141,12 @@ class GameObject(object):
     # update actual movement
     self.dx_actual = self.x - self.old_x
     self.dy_actual = self.y - self.old_y
+
+    # dead-band
+    if abs(self.dx_actual) < 1e-2: self.dx_actual = 0.0
+    if abs(self.dy_actual) < 1e-2: self.dy_actual = 0.0
+
+    # save values
     self.old_x = self.x
     self.old_y = self.y
 
@@ -157,6 +167,14 @@ class GameObject(object):
     pos = self.get_center()
     tf = m2d.Transform(self.heading, pos)
     return tf
+
+  def get_heading_orient(self):
+    return m2d.Orientation(self.heading)
+
+  def get_heading_unit_direction(self):
+    """ returns numpy array """
+    return (self.get_heading_orient() * m2d.Vector.e0).array
+
 
   def get_overlap_tiles(self):
     """ get all tile indices which overlap in the form out = [[idx_x1, idx_y1], ..., [idx_xn, idx_yn]]
@@ -218,7 +236,7 @@ class GameObject(object):
     return out
   
   def get_velocity(self):
-    out = np.array([self.dx, self.dy])
+    out = np.array([self.dx_actual, self.dy_actual])
     return out
   velocity = property(get_velocity)
 
@@ -228,10 +246,7 @@ class GameObject(object):
   velocity_mag = property(get_velocity_mag)
 
   def get_unit_velocity(self):
-    if np.isclose(self.velocity_mag, 0.0):
-      out = np.zeros(2)
-    else:
-      out = np.array(self.velocity) / self.velocity_mag
+    out = math_utils.zero_protection_divide(np.array(self.velocity), self.velocity_mag)
     return out
   unit_velocity = property(get_unit_velocity)
 
@@ -251,3 +266,8 @@ class GameObject(object):
     # final - initial == 'to' - 'from'
     out = np.array(other.center_of_mass) - np.array(self.center_of_mass) 
     return out
+
+  def dist_to_other(self, other):
+    com_vector = self.com_vector(other)
+    dist = np.linalg.norm(com_vector)
+    return dist

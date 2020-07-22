@@ -6,7 +6,7 @@ tileheight=16
 orientation=orthogonal
 
 [tilesets]
-tileset=../../wip1/tiles.png,16,16,0,0
+tileset=../art/tiles.png,16,16,0,0
 
 [layer]
 type=gameObjects
