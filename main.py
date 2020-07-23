@@ -8,8 +8,20 @@ from gameObjects  import *
 from physics      import *
 from classHolder  import *
 from AI           import *
+from debug        import *
 import weapons
 
+
+# -----------------------------------------------
+
+
+debug_mode = True
+Done = False # global
+
+
+
+
+# -----------------------------------------------
     
     
     
@@ -19,14 +31,18 @@ class MasterClass(object):
     """ initialize the game and set up the classes
     """
     self.screen = screen
+
+    # make debugger
+    if debug_mode:
+      self.debugger = Debug(self)
     
     # title screen
     prefix = r'[GAME_ROOT]' # raw string
-    config = os.path.join(prefix, "config", "title.txt")
-    self.title = ClassHolder(config)
-    self.title.worldClass = TitleScreen()
+    config = os.path.join(prefix, "config", "lvl1.txt")
+    lvl1 = ClassHolder(config)
+    lvl1.worldClass = World()
     # load config
-    self.title.loadConfigFile()
+    lvl1.loadConfigFile()
     
     # main game
     config = os.path.join(prefix, "config", "main.txt")
@@ -35,11 +51,11 @@ class MasterClass(object):
     self.main.loadConfigFile()
     
     # group all holders
-    self.holders = [self.title,
+    self.holders = [lvl1,
                     self.main]
                     
     # set initial holder
-    self.set_holder(self.title)
+    self.set_holder(self.holders[0])
 
   def set_holder(self, holder):
     """ update holder, and update DATA """
@@ -51,6 +67,10 @@ class MasterClass(object):
   def update(self, seconds, events):
     """ update each part of the game's engine
     """
+    # update debug box
+    if debug_mode:
+      self.debugger.update()
+
     # update holder
     self.holder.update()
     # update game with keyboard events
@@ -80,11 +100,11 @@ class MasterClass(object):
     
     if 'exit' in actions:
       # save & exit
-      sys.exit()
+      Done = True # global
 
     if 'interact' in actions:
-      if self.holder == self.title:
-        pass
+      # if self.holder == self.title:
+      #   pass
         # self.holder = self.main
 
       # switch weapon
@@ -94,17 +114,16 @@ class MasterClass(object):
     if 'use_object' in actions:
       pass
 
-    
 
 
-
-
+# init the clock
 clock = pygame.time.Clock()
 FPS = 30
 seconds = 0.0
 milli = 0.0
 
-#init
+# init pygame
+
 # os.environ['SDL_VIDEO_WINDOW_POS'] = '800,50'
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 pygame.init()
@@ -117,25 +136,23 @@ World.screen = screen
 # instantiate starting classes
 master = MasterClass(screen)
 
-ipics = 0
-
-
-#main loop:
-while 1:
+# ----------------------------------------------------------------------
+# main loop:
+while not Done:
   screen.fill((0,0,0)) #black background
   
   #update game world
-  seconds=clock.tick(FPS)/1000.0
+  seconds = clock.tick(FPS) / 1000.0
   master.update(seconds, pygame.event.get())
   
   #write screen
   master.writeScreen()
 
-  #pygame.image.save(screen, 'pics\image'+str(ipics)+'.png')
-  ipics += 1
   #display screen
-  pygame.display.flip() 
-  
+  pygame.display.flip()
+
+if debug_mode:
+  main_tk_dialog.destroy()
   
   
   

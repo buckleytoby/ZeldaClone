@@ -51,9 +51,11 @@ class PatchExt(m2d.geometry.Patch):
 
         # check for correct order
         if not (self.xlims[1] > self.xlims[0]):
-            pdb.set_trace()
+            pass
+            # pdb.set_trace()
         if not (self.ylims[1] > self.ylims[0]):
-            pdb.set_trace()
+            pass
+            # pdb.set_trace()
 
     def get_center(self):
             """ get the center

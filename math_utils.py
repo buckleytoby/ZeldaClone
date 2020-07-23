@@ -6,3 +6,7 @@ def zero_protection_divide(n, d):
 
 def normalize(vec):
     return zero_protection_divide(vec, np.linalg.norm(vec))
+
+def eucl_dist(vec1, vec2):
+    dist = np.sum( np.abs( vec1 - vec2) )
+    return dist

@@ -12,6 +12,28 @@ from characters   import *
 
 class ClassHolder(object):
   #hold all of the classes for a level
+
+  # constant dict, 1-indexed
+  game_object_idxs = {1: 'Player',
+                      2: 'Soldier',
+                      3: 'MiniSoldier',
+                      4: 'MegaSoldier',
+                      5: 'Archer',
+                      6: 'Archer2',
+                      7: 'Archer3',
+                      8: 'Archer4',
+                      }
+
+  obsolete = {'Player': 1,
+                      'Soldier': 2,
+                      'MiniSoldier': 3,
+                      'MegaSoldier': 4,
+                      'Archer': 5,
+                      'Archer2': 6,
+                      'Archer3': 7,
+                      'Archer4': 8,
+                      }
+
   def __init__(self, configFile):
     self.configFile = process_file_name(configFile)
     self.worldClass   = World()
@@ -30,6 +52,9 @@ class ClassHolder(object):
                  'MiniSoldier': MiniSoldierFactory(),
                  'MegaSoldier': MegaSoldierFactory(),
                  "Archer": ArcherFactory(),
+                 "Archer2": Archer2Factory(),
+                 "Archer3": Archer3Factory(),
+                 "Archer4": Archer4Factory(),
                   }
 
     
@@ -74,6 +99,55 @@ class ClassHolder(object):
 
   def remove_game_object(self, obj):
     del self.gameObjects[obj.id]
+
+  def set_map(self):
+    mapMatrix = np.empty((mapWidth, mapHeight), dtype='int')
+    for j in range(0, mapHeight):
+      dlist=parse_data(f.parse_lines())
+      for i in range(0, mapWidth):
+        mapMatrix[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
+    self.worldClass.setMap(mapType, mapMatrix)
+
+  def set_map_json(self, json_fn):
+    # load json file and extract the objects
+
+    with open(json_fn) as json_file:
+      data = json.load(json_file)
+      height = data["height"]
+      width = data["width"]
+      
+      layers = data["layers"]
+      for layer in layers:
+        map_type = layer["name"]
+        map_matrix = np.array(layer["data"], dtype='int') - 1 #Tiled is 1 indexed
+        map_matrix = np.reshape(map_matrix, (height, width)).T # must tranpose due to Tiled coord sys
+        self.worldClass.setMap(map_type, map_matrix)
+
+    # nowhere better to put this
+    self.instantiate_game_objects()
+
+  def reset_game_objects_arr(self):
+    world_map = self.worldClass.getMap("staticObjects")
+    width = world_map.shape[0]
+    height = world_map.shape[1]
+    self.gameObjectsARR = [[[] for y in range(height)] for x in range(width)]
+
+  def instantiate_game_objects(self):
+    self.reset_game_objects_arr()
+
+    # get map
+    map1 = self.worldClass.getMap("gameObjects") + 1 # np array, add 1 so that 0 is null
+    indices = np.nonzero(map1)
+
+    for x, y in zip(indices[0], indices[1]):
+      val = map1[x][y]
+      if val in ClassHolder.game_object_idxs:
+        factory_name = ClassHolder.game_object_idxs[val]
+        #instantiate game object
+        object = self.factories[factory_name].create(x, y)
+        self.add_game_object( x, y, object )
+        if factory_name == 'Player':
+          self.playerClass.setGameObject(object)
     
   def loadConfigFile(self):
     g=[]
@@ -88,6 +162,10 @@ class ClassHolder(object):
           f=g[-1]
         else:
           break
+
+      elif line == "[json_map]":
+        json_fn = process_file_name( f.parse_lines() )
+        self.set_map_json(json_fn)
       
         
       elif line == '[INCL]':
@@ -101,9 +179,14 @@ class ClassHolder(object):
         line = f.parse_lines()
         type = line.split('=')[1] #get the word after '='
         if type == 'gameObjects':
-          name = f.parse_lines()
-          file_name = process_file_name(name)
-          self.worldClass.loadGameObjects(file_name, f, self.factories)
+          line = f.parse_lines()
+          if line == 'clear':
+            clear = True
+            line = f.parse_lines()
+          else:
+            clear = False
+          file_name = process_file_name(line)
+          self.worldClass.loadGameObjects(file_name, f, self.factories, clear=clear)
 
         elif type == 'childGameObjects':
           self.worldClass.load_child_objects(f, self.factories)
@@ -123,67 +206,6 @@ class ClassHolder(object):
                 continue
               self.worldClass.tileArt.tiles[count].can_collide = collide
               count += 1
-
-
-
-            
-          
-      elif line == '[header]': #this always comes before [layers]
-        mapWidth = int(f.parse_lines()[6:])
-        mapHeight = int(f.parse_lines()[7:])
-        
-      elif line == '[mobs]':
-        while line != '[end]':
-          if line in factory:
-            factory = self.factories[line]
-            x = float(f.parse_lines())
-            y = float(f.parse_lines())
-            object = factory.create(x, y)
-            self.add_game_object( object )
-            if line == 'Player':
-                self.playerClass.setGameObject(x, y, object)
-          
-          line = f.parse_lines()
-          
-      elif line == '[layer]':
-        line=f.parse_lines()
-        mapType = line.split('=')[1] #get the word after '='
-        f.parse_lines()
-        
-        if mapType != 'gameObjects':
-          mapMatrix = np.empty((mapWidth, mapHeight), dtype='int')
-          for j in range(0, mapHeight):
-            dlist=parse_data(f.parse_lines())
-            for i in range(0, mapWidth):
-              mapMatrix[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
-          self.worldClass.setMap(mapType, mapMatrix)
-        elif mapType == 'gameObjects': # special map type for units
-          self.gameObjectsARR = [[[] for y in range(mapHeight)] for x in range(mapWidth)]
-          for y in range(0, mapHeight):
-            dlist=parse_data(f.parse_lines())
-            for x in range(0, mapWidth):
-              try:
-                objInd = int(dlist[x])-1
-              except:
-                pdb.set_trace()
-              if objInd == -1:
-                continue
-              if objInd == 0:
-                objType = 'Player'
-              elif objInd == 1:
-                objType = 'Soldier'
-              elif objInd == 2:
-                objType = 'MiniSoldier'
-              elif objInd == 3:
-                objType = 'MegaSoldier'
-              elif objInd == 4:
-                objType = 'Archer'
-              #instantiate game object
-              factory = self.factories[objType]
-              object = factory.create(x, y)
-              self.add_game_object( x, y, object )
-              if objType == 'Player':
-                self.playerClass.setGameObject(object)
               
       #restart loop, get next line
       line=f.parse_lines()

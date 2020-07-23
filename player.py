@@ -5,6 +5,7 @@ from utils        import *
 import weapons
 import math_utils
 
+global Done
 
 class Screen(object):
   #class to deal with screen-scrolling n shit
@@ -99,9 +100,13 @@ class Player(AI.Basic):
     self.gameObject = None
     self.screenClass = Screen()
     self.keyboard = Keyboard()
-    self.joystick = Joystick()
+    try:
+      self.joystick = Joystick()
+      self.use_joystick = True
+    except:
+      self.joystick = None
+      self.use_joystick = False
     self.weapon_idx = 1
-    self.use_joystick = True
 
     self.cbs_to_call = []
 
@@ -134,7 +139,7 @@ class Player(AI.Basic):
       if action not in actions:
         actions.append(action)
       if action is 'interact': pass
-      if action is 'exit':     sys.exit()
+      if action is 'exit':     Done = True
       if action is 'edit':
         #turn on edit mode
         print('edit mode')

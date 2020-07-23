@@ -1,0 +1,47 @@
+[source]
+type=tiles
+[GAME_ROOT]\art\tiles.png
+0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+
+[end]
+
+
+# loading the map
+[json_map]
+[GAME_ROOT]\maps\lvl1.json
+
+
+
+
+[source]
+type=gameObjects
+clear
+[GAME_ROOT]\art\gameObjects.png
+Player
+Soldier
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\Brosh.png
+Archer
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\bunba.png
+Archer2
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\mushka.png
+Archer3
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\Scallick.png
+Archer4
+
+[source]
+type=childGameObjects
+MiniSoldier Soldier
+MegaSoldier Soldier
+[end]

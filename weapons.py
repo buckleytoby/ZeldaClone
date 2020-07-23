@@ -19,7 +19,7 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
         self.oy = 0.0 # offset of hitbox (to center)
         self.duration = 0.2
         self.power = 21.0
-        self.mass = 1000.0 # determines weapon blow-back
+        self.mass = 2000.0 # determines weapon blow-back
         self.cooldown = 0.6
         self.is_continuous = False
 
@@ -107,7 +107,7 @@ class Arrow1FCT(SoldierWeapon1FCT):
         self.oy = 0.0 # offset of hitbox (to center)
         self.duration = 1.0
         self.power = 34.0
-        self.mass = 1000.0 # determines weapon blow-back
+        self.mass = 2000.0 # determines weapon blow-back
         self.max_velocity = 5.0
         self.cooldown = 0.1
         self.is_continuous = True
@@ -144,8 +144,22 @@ arrow2FCT = Arrow1FCT(name="Arrow2",
                       )
 arrow3FCT = Arrow1FCT(name="Arrow3",
                       cooldown = 1.0,
+                      w = 1.5, # width of hitbox
+                      h = 1.5 # height of hitbox
+                      )
+arrow4FCT = Arrow1FCT(name="Arrow4",
+                      cooldown = 0.25,
+                      w = 1.5, # width of hitbox
+                      h = 1.5 # height of hitbox
+                      )
+arrow5FCT = Arrow1FCT(name="Arrow5",
+                      cooldown = 1.0,
+                      w = 0.5, # width of hitbox
+                      h = 0.5 # height of hitbox
                       )
 
 weapons_list.append( arrow1FCT )
 weapons_list.append( arrow2FCT )
 weapons_list.append( arrow3FCT )
+weapons_list.append( arrow4FCT )
+weapons_list.append( arrow5FCT )

@@ -5,6 +5,9 @@ import factory
 import attack
 import weapons
 import AI
+
+
+defaultAI = AI.DmgAvoiderAttacker
   
   
 class SoldierFactory(factory.GameObjectFactory):
@@ -17,11 +20,11 @@ class SoldierFactory(factory.GameObjectFactory):
     self.values['mass']       = 100.0 # kg
     self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change
     self.values['pixelHeight'] = 24 # size of the sprite image, depends on image size, shouldn't change
-    self.values['max_velocity'] = 3.0 #m/s
+    self.values['max_velocity'] = 2.0 #m/s
     self.values['objectType'] = 'Soldier'
     self.values['type'] = "character"
     self.values['team_id'] = 1
-    self.ai_class = AI.DmgAvoiderAttacker
+    self.ai_class = defaultAI
 
   
   def create(self, x, y):
@@ -42,7 +45,7 @@ class SoldierFactory(factory.GameObjectFactory):
 class PlayerFactory(SoldierFactory):
   def __init__(self):
     super(PlayerFactory, self).__init__()
-    self.values['max_velocity'] = 6.0 #m/s
+    self.values['max_velocity'] = 4.0 #m/s
     self.values['artWidth']      = 1.0
     self.values['artHeight']     = 1.5
     self.values['team_id'] = 0
@@ -67,28 +70,28 @@ class MiniSoldierFactory(SoldierFactory):
   def __init__(self):
     super().__init__()
     factor = 0.75
-    self.values['width']      = 1.0 * factor
-    self.values['height']     = 1.0 * factor
-    self.values['artWidth']      = 1.0 * factor
-    self.values['artHeight']     = 1.5 * factor
+    self.values['width']      *= factor
+    self.values['height']     *= factor
+    self.values['artWidth']      *= factor
+    self.values['artHeight']     *= factor
     self.values['mass']       = 100.0 # kg
     self.values['max_velocity'] = 3.0 / factor #m/s
     self.values['objectType'] = 'MiniSoldier'
-    self.ai_class = AI.AvoiderAttacker
+    self.ai_class = defaultAI
 
 
 class MegaSoldierFactory(SoldierFactory):
   def __init__(self):
     super().__init__()
     factor = 4.0
-    self.values['width']      = 1.0 * factor
-    self.values['height']     = 1.0 * factor
-    self.values['artWidth']      = 1.0 * factor
-    self.values['artHeight']     = 1.5 * factor
-    self.values['mass']       = 100.0 # kg
+    self.values['width']      *= factor
+    self.values['height']     *= factor
+    self.values['artWidth']      *= factor
+    self.values['artHeight']     *= factor
+    self.values['mass']       = 100.0 * factor # kg
     self.values['max_velocity'] = 3.0 / factor #m/s
     self.values['objectType'] = 'MegaSoldier'
-    self.ai_class = AI.DmgAvoiderAttacker
+    self.ai_class = defaultAI
 
 class ArcherFactory(factory.GameObjectFactory):
   def __init__(self):
@@ -104,10 +107,10 @@ class ArcherFactory(factory.GameObjectFactory):
     self.values['objectType'] = 'Archer' # for drawing purposes
     self.values['type'] = "character"
     self.values['team_id'] = 1
-    self.ai_class = AI.DmgAvoiderAttacker
+    self.ai_class = defaultAI
   
   def create(self, x, y):
-    self.values['attacker'] = attack.Attacker(weapons.arrow3FCT) # want unique instance
+    self.values['attacker'] = attack.Attacker(weapons.arrow5FCT) # want unique instance
     object = super().create(x, y)
 
     # set AI type
@@ -121,3 +124,16 @@ class ArcherFactory(factory.GameObjectFactory):
     # setup
     object.setSpriteStatus(visible=True, has_sprite=True)
     return object
+
+class Archer2Factory(ArcherFactory):
+  def __init__(self):
+    super().__init__()
+    self.values['objectType'] = 'Archer2' # for drawing purposes
+class Archer3Factory(ArcherFactory):
+  def __init__(self):
+    super().__init__()
+    self.values['objectType'] = 'Archer3' # for drawing purposes
+class Archer4Factory(ArcherFactory):
+  def __init__(self):
+    super().__init__()
+    self.values['objectType'] = 'Archer4' # for drawing purposes

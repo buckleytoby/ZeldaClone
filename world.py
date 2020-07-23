@@ -16,7 +16,9 @@ class ObjectArt(object): #procedure: get sprite index from gameObject.animation.
     self.data = data
     
   def getSprite(self, spriteIndx):
-    return self.data[spriteIndx]
+    # modulate spriteIndx with length of art
+    idx = spriteIndx % len(self.data)
+    return self.data[idx]
 
 
 
@@ -54,6 +56,11 @@ class Map(object):
     self.tileData = data
     self.numTilesWidth  = data.shape[0]
     self.numTilesHeight = data.shape[1]
+    
+  def getTileData(self):
+    """ tile data is an array the size of the map, which contains indices which specify which tile type the tile is
+    """
+    return self.tileData
 
   def get_rect(self, i, j):
     lt = float(i), float(j)
@@ -77,6 +84,9 @@ class World(object):
     self.objectArts = {}
     self.neighborMaps = [] #which maps are connected to this one
     self.edit=False #whether or not in edit mode
+
+    # --- debugging ---
+    self.draw_collision_boxes = False
     
   def load_tiles(self, imagefile, width, height):
     #reads in image, resets tileArt, fills with tiles
@@ -92,10 +102,11 @@ class World(object):
         tile = pygame.transform.scale(tile,(pixelsPerTileWidth,pixelsPerTileHeight))
         self.tileArt.addTile(tile)
         
-  def loadGameObjects(self, imagefile, f, factories): #height/width of tiles
+  def loadGameObjects(self, imagefile, f, factories, clear=False): #height/width of tiles
     # reads in image, resets, fills with sprites
     # input: 'f' is the file object which specifies names of game objects
-    self.objectArts.clear()
+    if clear:
+      self.objectArts.clear()
     image = pygame.image.load(imagefile).convert_alpha()
     imgw, imgh = image.get_size() # in pixels
     
@@ -162,6 +173,10 @@ class World(object):
     #require all maps to be numpy arrays
     self.maps[mapType].setTileData(data) #think I have to copy
     
+  def getMap(self, mapType):
+    #require all maps to be numpy arrays
+    return self.maps[mapType].getTileData() #think I have to copy
+    
   def setParent(self, mapType, parentType):
     self.mapParents[mapType] = parentType
     
@@ -171,10 +186,15 @@ class World(object):
     return self.tileArt.tiles[tileValue].art
 
   def can_tile_collide(self, mapType, indices):
+    # return False if indices are out of range
     i, j = indices
-    tileValue = self.maps[mapType].tileData[i][j]
-    out = self.tileArt.tiles[tileValue].can_collide
-    return out
+    data = self.maps[mapType].tileData
+    if np.all( np.logical_and( np.array((i, j)) > (0, 0), np.array((i, j)) < data.shape ) ):
+      tileValue = data[i][j]
+      out = self.tileArt.tiles[tileValue].can_collide
+      return out
+    else:
+      return False
     
   def convertTileToPixel(self, indices): #offset backwards so that it'll appear correct ????????????
     pos_tile = np.array(indices, dtype='float')
@@ -250,7 +270,8 @@ class World(object):
       
     isDrawn = defaultdict(bool)
     for mapType in self.maps:
-      recurse(mapType)
+      if mapType == "staticObjects":
+        recurse(mapType)
 
   def clipScreen(self, mapLength):
     maxIDX_x, maxIDX_y = np.clip(self.screenMaxIDX, np.zeros(2), 
@@ -289,34 +310,43 @@ class World(object):
     #reset drawn status for each mob in frame
     ###self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
 
-
     for key in gameObjects: 
       go = gameObjects[key]
       go.drawn = False
       if go.intersect(screen_rect, art=True):
+        # draw the art
         self.low_draw_art(go)
-        
-  def drawGameObjects(self, gameObjects, gameObjectsARR): #right now this could be pulled up into classHolder ...
-    """ draw game objects by iterating through "map" of units (cheap man's quad-tree)
-    TODO: fix bug -- gameObjectsARR never gets updated
-    """
-    mapLenX = len(gameObjectsARR)
-    mapLenY = len(gameObjectsARR[0])
-    #setting map bounds for mobs
-    maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX, mapLenY))
 
-    pdb.set_trace()
+        
+  # def drawGameObjects(self, gameObjects, gameObjectsARR): #right now this could be pulled up into classHolder ...
+  #   """ draw game objects by iterating through "map" of units (cheap man's quad-tree)
+  #   TODO: fix bug -- gameObjectsARR never gets updated
+  #   """
+  #   mapLenX = len(gameObjectsARR)
+  #   mapLenY = len(gameObjectsARR[0])
+  #   #setting map bounds for mobs
+  #   maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX, mapLenY))
+
+  #   pdb.set_trace()
       
-    #reset drawn status for each mob in frame
-    self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
+  #   #reset drawn status for each mob in frame
+  #   self.resetDrawnStatus(gameObjects, gameObjectsARR, (maxIDX_x, maxIDX_y))
           
-    #moving objects -- reverse order so that overlapping mobs are drawn correctly
-    for i in range(maxIDX_y-1, minIDX_y, -1):
-      for j in range(maxIDX_x-1, minIDX_x, -1):
-        for gameObjectID in gameObjectsARR[i][j]:
-          gameObject = gameObjects[gameObjectID]
-          #pdb.set_trace()
-          self.low_draw_art(gameObject)
+  #   #moving objects -- reverse order so that overlapping mobs are drawn correctly
+  #   for i in range(maxIDX_y-1, minIDX_y, -1):
+  #     for j in range(maxIDX_x-1, minIDX_x, -1):
+  #       for gameObjectID in gameObjectsARR[i][j]:
+  #         gameObject = gameObjects[gameObjectID]
+  #         #pdb.set_trace()
+  #         self.low_draw_art(gameObject)
+
+  def draw_go_rect(self, go):
+    # this is the collision rect
+    rect = go.rect
+    rect_screen = rect.convert_to_screen_rect(self.screenLocation)
+    rect_pygame = rect_screen.convert_to_pygame_rect()
+    # World.screen.draw.filled_rect(rect_pygame, go.rgb)
+    pygame.draw.rect(World.screen, go.rgb, rect_pygame)
 
   def low_draw_art(self, go):
     if go.visible and go.drawn == False:
@@ -331,11 +361,11 @@ class World(object):
         World.screen.blit(sprite, (xscreen, yscreen))
 
       else: # solid rect
-        rect = go.rect
-        rect_screen = rect.convert_to_screen_rect(self.screenLocation)
-        rect_pygame = rect_screen.convert_to_pygame_rect()
-        # World.screen.draw.filled_rect(rect_pygame, go.rgb)
-        pygame.draw.rect(World.screen, go.rgb, rect_pygame)
+        self.draw_go_rect(go)
+
+      # debugging: draw the collision box, on top of art
+      if self.draw_collision_boxes:
+        self.draw_go_rect(go)
       
       go.drawn = True
       

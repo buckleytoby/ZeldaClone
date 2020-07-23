@@ -2,6 +2,7 @@
 import utils
 from config       import *
 import attack
+import math_utils
 
 
 class Physics(object):
@@ -15,8 +16,17 @@ class Physics(object):
     self.gravity = 9.81 # m/s^2
     self.gameObjects = None
     self.gameObjectsARR = None
+
+  def get_active_game_objects(self, gameObjects):
+    # lazy and poor man's "on-screen" check
+    out = {}
+    for key in gameObjects:
+      gameObject = gameObjects[key]
+      if math_utils.eucl_dist(DATA["player_xy"], gameObject.center_of_mass) < 20:
+        out[key] = gameObject
+    return out
       
-  def update(self, timeElapsed, gameObjects, worldClass, mapType):
+  def update(self, timeElapsed, all_game_objects, worldClass, mapType):
     """ 
     Step 1: everybody moves
     Step 2: resolve all collisions
@@ -26,9 +36,14 @@ class Physics(object):
     
     vel_dict = {}
 
+    # get only game objects that are on screen
+    gameObjects = self.get_active_game_objects(all_game_objects)
+
     # first, update each game-objects location
     for key in gameObjects:
       gameObject = gameObjects[key]
+
+
 
       #gameObject.update(timeElapsed)
       action, cbs = gameObject.AI.get_action()
@@ -118,8 +133,8 @@ class Physics(object):
     """ momentum (represented as delta-v) imparted ON go2 BY go1
     """
 
-    # force field away from center-of-mass
-    dv2 = go1.com_vector(go2) * go1.mass / 30.0
+    # force field away from center-of-mass, scaled by receiving object's mass & friction
+    dv2 = go1.com_vector(go2) * go1.mass / go2.mass * (1.0 - go2.friction)
 
     # TODO: calculate required dv to align rect edges
 
@@ -188,7 +203,7 @@ class Physics(object):
         # blowback
         if hit:
           dv = self.momentum_trade(do, go)
-        # print("dv: {}".format(dv))
+          # print("dv: {}".format(dv))
 
     return dv
 
