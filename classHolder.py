@@ -36,9 +36,9 @@ class ClassHolder(object):
 
   def __init__(self, configFile):
     self.configFile = process_file_name(configFile)
-    self.worldClass   = World()
+    self.worldClass   = World(self)
     self.playerClass  = Player()
-    self.physicsClass = Physics()
+    self.physicsClass = Physics(self.playerClass)
     # game objects dict
     self.gameObjects = {}
     self.gameObjectsARR = []
@@ -58,7 +58,7 @@ class ClassHolder(object):
                   }
 
     
-    
+  # # # # @profile
   def writeScreen(self):
     screenLocation = self.playerClass.screenClass.getLocation()
     screen_rect = self.playerClass.screenClass.rect
@@ -100,13 +100,13 @@ class ClassHolder(object):
   def remove_game_object(self, obj):
     del self.gameObjects[obj.id]
 
-  def set_map(self):
-    mapMatrix = np.empty((mapWidth, mapHeight), dtype='int')
-    for j in range(0, mapHeight):
-      dlist=parse_data(f.parse_lines())
-      for i in range(0, mapWidth):
-        mapMatrix[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
-    self.worldClass.setMap(mapType, mapMatrix)
+  # def set_map(self):
+  #   mapMatrix = np.empty((mapWidth, mapHeight), dtype='int')
+  #   for j in range(0, mapHeight):
+  #     dlist=parse_data(f.parse_lines())
+  #     for i in range(0, mapWidth):
+  #       mapMatrix[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
+  #   self.worldClass.setMap(mapType, mapMatrix)
 
   def set_map_json(self, json_fn):
     # load json file and extract the objects
@@ -125,6 +125,7 @@ class ClassHolder(object):
 
     # nowhere better to put this
     self.instantiate_game_objects()
+    self.make_portals()
 
   def reset_game_objects_arr(self):
     world_map = self.worldClass.getMap("staticObjects")
@@ -148,6 +149,46 @@ class ClassHolder(object):
         self.add_game_object( x, y, object )
         if factory_name == 'Player':
           self.playerClass.setGameObject(object)
+
+  def make_portals(self):
+    # get map
+    map1 = self.worldClass.getMap("portals") + 1 # np array, add 1 so that 0 is null
+    if map1 is not None: # protect against None
+      indices = np.nonzero(map1)
+      values = map1[indices]
+      #
+      portals = []
+
+      # set up array
+      a = np.vstack((values, indices)).T
+
+      # sort by portal id
+      sorted1 = a[a[:,0].argsort()]
+      u, s = np.unique(sorted1[:,0], return_index=True)
+      
+      # get all of same value
+      splitted = np.split(sorted1, s[1:], axis=0)
+
+      portal_id_counter = 0
+      for split in splitted:
+        if len(split) <= 1: # skip single-entry portals
+          continue
+        
+        # 1 portal per entry
+        for i in range(len(split)):
+          # cyclical exit
+          j = (i+1) % len(split)
+
+          src = split[i, 1:]
+          dst = split[j, 1:]
+
+          # make portal game object
+          portals.append( Portal(src, portal_id_counter + i, dst, portal_id_counter + j) )
+        portal_id_counter += i+1 # will be last value of the inner loop, i.e. len(split)
+
+      # pass to physics class
+      self.physicsClass.set_portals(portals)
+
     
   def loadConfigFile(self):
     g=[]

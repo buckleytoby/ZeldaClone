@@ -57,6 +57,18 @@ class PatchExt(m2d.geometry.Patch):
             pass
             # pdb.set_trace()
 
+    def collide(self, other):
+        """Compute the intersection with 'other'. If overlapping a Patch will
+        be returned representing the overlap. Otherwise 'None' is
+        returned.
+        """
+        xlims_new = max(self.xlims[0], other.xlims[0]), min(self.xlims[1], other.xlims[1])
+        ylims_new = max(self.ylims[0], other.ylims[0]), min(self.ylims[1], other.ylims[1])
+        if xlims_new[0] < xlims_new[1] and ylims_new[0] < ylims_new[1]:
+            return True
+        else:
+            return False
+
     def get_center(self):
             """ get the center
             """
@@ -107,6 +119,7 @@ class PatchExt(m2d.geometry.Patch):
     height = property(get_height)
 
     def convert_to_pygame_rect(self):
+        # REMEMBER: pygame Rect's truncate to the nearest integer
         out = pygame.Rect(self.left, self.top, self.width, self.height)
         return out
 
@@ -124,6 +137,28 @@ class PatchExt(m2d.geometry.Patch):
         xxyy_limits = corner_to_limits(new_pos, new_size)
         out = PatchExt(xxyy_limits)
         return out
+
+    # required functions for pygame Rect & quadtree compliance
+    def collidelist(self, list):
+        idx = -1
+        for counter, rect in enumerate(list):
+            if self.collide(rect):
+                idx = counter
+                break
+        return idx
+
+    def collidelistall(self, list):
+        # output: indices
+        pass
+
+    def union(self, rect):
+        # output: Rect
+        pass
+
+    def union_ip(self, rect):
+        # output: None
+        pass
+
 
 
 def process_file_name(s1):
@@ -168,3 +203,124 @@ def corner_to_limits(corner, size):
 def get_heading(m2d_tf):
     heading = m2d_tf.orient.angle
     return heading
+
+# https://www.pygame.org/wiki/QuadTree
+# http://www.pygame.org/project-Quadtree+test-1691-.html 
+
+# ------------------------------------------------------------------------------
+# Quadtrees!
+class QuadTree(object):
+    """An implementation of a quad-tree.
+ 
+    This QuadTree started life as a version of [1] but found a life of its own
+    when I realised it wasn't doing what I needed. It is intended for static
+    geometry, ie, items such as the landscape that don't move.
+ 
+    This implementation inserts items at the current level if they overlap all
+    4 sub-quadrants, otherwise it inserts them recursively into the one or two
+    sub-quadrants that they overlap.
+ 
+    Items being stored in the tree must be a pygame.Rect or have have a
+    .rect (pygame.Rect) attribute that is a pygame.Rect
+	    ...and they must be hashable.
+    
+    Acknowledgements:
+    [1] http://mu.arete.cc/pcr/syntax/quadtree/1/quadtree.py
+    """
+
+    def __init__(self, items, depth=8, bounding_rect=None):
+        """Creates a quad-tree.
+ 
+        @param items:
+            A sequence of items to store in the quad-tree. Note that these
+            items must be a pygame.Rect or have a .rect attribute.
+            
+        @param depth:
+            The maximum recursion depth.
+            
+        @param bounding_rect:
+            The bounding rectangle of all of the items in the quad-tree. For
+            internal use only.
+        """
+
+        # The sub-quadrants are empty to start with.
+        self.nw = self.ne = self.se = self.sw = None
+        
+        # If we've reached the maximum depth then insert all items into this
+        # quadrant.
+        depth -= 1
+        if depth == 0 or not items:
+            self.items = items
+            return
+ 
+        # Find this quadrant's centre.
+        if bounding_rect:
+            bounding_rect = pygame.Rect( bounding_rect )
+        else:
+            # If there isn't a bounding rect, then calculate it from the items.
+            bounding_rect = pygame.Rect( items[0].pygame_rect )
+            for item in items[1:]:
+                bounding_rect.union_ip( item.pygame_rect )
+        cx = self.cx = bounding_rect.centerx
+        cy = self.cy = bounding_rect.centery
+
+        self.items = []
+        nw_items = []
+        ne_items = []
+        se_items = []
+        sw_items = []
+
+        for item in items:
+            # Which of the sub-quadrants does the item overlap?
+            in_nw = item.pygame_rect.left <= cx and item.pygame_rect.top <= cy
+            in_sw = item.pygame_rect.left <= cx and item.pygame_rect.bottom >= cy
+            in_ne = item.pygame_rect.right >= cx and item.pygame_rect.top <= cy
+            in_se = item.pygame_rect.right >= cx and item.pygame_rect.bottom >= cy
+                
+            # If it overlaps all 4 quadrants then insert it at the current
+            # depth, otherwise append it to a list to be inserted under every
+            # quadrant that it overlaps.
+            if in_nw and in_ne and in_se and in_sw:
+                self.items.append(item)
+            else:
+                if in_nw: nw_items.append(item)
+                if in_ne: ne_items.append(item)
+                if in_se: se_items.append(item)
+                if in_sw: sw_items.append(item)
+            
+        # Create the sub-quadrants, recursively.
+        if nw_items:
+            self.nw = QuadTree(nw_items, depth, (bounding_rect.left, bounding_rect.top, cx, cy))
+        if ne_items:
+            self.ne = QuadTree(ne_items, depth, (cx, bounding_rect.top, bounding_rect.right, cy))
+        if se_items:
+            self.se = QuadTree(se_items, depth, (cx, cy, bounding_rect.right, bounding_rect.bottom))
+        if sw_items:
+            self.sw = QuadTree(sw_items, depth, (bounding_rect.left, cy, cx, bounding_rect.bottom))
+ 
+ 
+    def hit(self, rect):
+        """Returns the items that overlap a bounding rectangle.
+ 
+        Returns the set of all items in the quad-tree that overlap with a
+        bounding rectangle.
+        
+        @param rect:
+            The bounding rectangle being tested against the quad-tree. This
+            must possess left, top, right and bottom attributes.
+        """
+
+        # Find the hits at the current level.
+        hits = set( self.items[n] for n in rect.collidelistall( [item.pygame_rect for item in self.items] ) )
+        
+        # Recursively check the lower quadrants.
+        if self.nw and rect.left <= self.cx and rect.top <= self.cy:
+            hits |= self.nw.hit(rect)
+        if self.sw and rect.left <= self.cx and rect.bottom >= self.cy:
+            hits |= self.sw.hit(rect)
+        if self.ne and rect.right >= self.cx and rect.top <= self.cy:
+            hits |= self.ne.hit(rect)
+        if self.se and rect.right >= self.cx and rect.bottom >= self.cy:
+            hits |= self.se.hit(rect)
+
+        return hits

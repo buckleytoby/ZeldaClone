@@ -4,28 +4,66 @@ from config       import *
 import attack
 import math_utils
 
-
 class Physics(object):
   #physics object for the map
   # 
   # input a handle to static objects and moving mobs
   # each object must contain x, y, width, height, and mass attributes
   #
-  def __init__(self):
+  def __init__(self, player):
+    self.playerClass = player
     self.force = 50 #N
     self.gravity = 9.81 # m/s^2
     self.gameObjects = None
     self.gameObjectsARR = None
+    self.portal_tree = None
+    self.portals = None
+    self.portals_rects = []
 
+  def set_portals(self, portals):
+    # gen pygame rects
+    self.portals = portals
+    self.portals_rects = [portal.rect for portal in self.portals]
+    [portal.calc_pygame_rect() for portal in self.portals]
+    self.portal_tree = utils.QuadTree(portals)
+
+  def check_portals(self, gameObject):
+    if self.portal_tree: # protect against None
+      # hits = self.portal_tree.hit(gameObject.pygame_rect)
+      hit_idx = gameObject.rect.collidelist(self.portals_rects)
+      if hit_idx >= 0:
+        self.portals[hit_idx].activate(gameObject, self.portals) # teleport!
+
+  # @profile
   def get_active_game_objects(self, gameObjects):
-    # lazy and poor man's "on-screen" check
-    out = {}
-    for key in gameObjects:
-      gameObject = gameObjects[key]
-      if math_utils.eucl_dist(DATA["player_xy"], gameObject.center_of_mass) < 20:
-        out[key] = gameObject
-    return out
+    # collect all rects
+    go_list = list(gameObjects.values())
+
+    # calc all pygame rects
+    [go.calc_pygame_rect() for go in go_list]
+
+    # use a quadtree
+    tree = utils.QuadTree(go_list, depth=6)
+
+    # get rect for the active screen
+    screen = self.playerClass.screenClass.get_footprint_rect().convert_to_pygame_rect()
+
+    hits = tree.hit(screen)
+    active_gos = {go.id: go for go in hits}
+    return active_gos
+
+  # def get_active_game_objects2(self, gameObjects):
+  #   # lazy and poor man's "on-screen" check ... need to replace this with a proper quadtree (at-least do 16-tile chunks)
+  #   out = {}
+  #   player_xy = DATA["player_xy"]
+  #   for key in gameObjects:
+  #     gameObject = gameObjects[key]
+  #     # if gameObject.objectType == 'Player':
+  #     if math_utils.eucl_dist(player_xy, gameObject.position) < 20:
+  #       out[key] = gameObject
+  #   return out
       
+  # @profile
   def update(self, timeElapsed, all_game_objects, worldClass, mapType):
     """ 
     Step 1: everybody moves
@@ -38,6 +76,8 @@ class Physics(object):
 
     # get only game objects that are on screen
     gameObjects = self.get_active_game_objects(all_game_objects)
+    if not gameObjects:
+      return
 
     # first, update each game-objects location
     for key in gameObjects:
@@ -51,7 +91,7 @@ class Physics(object):
       dx, dy = action['dv']
 
       # add on pre-existing momentum, deteriorated by friction
-      dv = 5. * ( gameObject.momentum / gameObject.mass) * gameObject.unit_velocity
+      dv = 5. * gameObject.velocity # simplified this equation: ( gameObject.momentum / gameObject.mass) * gameObject.unit_velocity
 
       dx += dv[0]
       dy += dv[1]
@@ -89,45 +129,33 @@ class Physics(object):
 
           # pdb.set_trace()
           
-          if gameObject.intersect(rect):
+          if gameObject.collide(rect):
             # pdb.set_trace()
             # see which direction is less distance to move
             
-            if True: #np.abs(dx) < 1e-6 and np.abs(dy) < 1e-6:
-              # got pushed
-              xf1 = rect.left - gameObject.width
-              xf2 = rect.right
-              yf1 = rect.top - gameObject.height
-              yf2 = rect.bottom
-              dist1 = np.abs(gameObject.x - xf1)
-              dist2 = np.abs(gameObject.x - xf2)
-              dist3 = np.abs(gameObject.y - yf1)
-              dist4 = np.abs(gameObject.y - yf2)
-              argmin = np.argmin([dist1, dist2, dist3, dist4])
-              if argmin == 0: gameObject.x = xf1
-              if argmin == 1: gameObject.x = xf2
-              if argmin == 2: gameObject.y = yf1
-              if argmin == 3: gameObject.y = yf2
-            else:
-              xf = 9999.0
-              yf = 9999.0
-              if dx > 0: # Moving right; Hit the left side of the wall
-                xf = rect.left - gameObject.width
-              elif dx < 0: # Moving left; Hit the right side of the wall
-                xf = rect.right
-              if dy > 0: # Moving down; Hit the top side of the wall
-                yf = rect.top - gameObject.height
-              elif dy < 0: # Moving up; Hit the bottom side of the wall
-                yf = rect.bottom
-              dist_x = np.abs(gameObject.x - xf)
-              dist_y = np.abs(gameObject.y - yf)
-              if dist_x < dist_y:
-                gameObject.x = xf
-              else:
-                gameObject.y = yf
+            # got pushed
+            xf1 = rect.left - gameObject.width
+            xf2 = rect.right
+            yf1 = rect.top - gameObject.height
+            yf2 = rect.bottom
+            dist1 = np.abs(gameObject.x - xf1)
+            dist2 = np.abs(gameObject.x - xf2)
+            dist3 = np.abs(gameObject.y - yf1)
+            dist4 = np.abs(gameObject.y - yf2)
+            argmin = np.argmin([dist1, dist2, dist3, dist4])
+            if argmin == 0: gameObject.x = xf1
+            if argmin == 1: gameObject.x = xf2
+            if argmin == 2: gameObject.y = yf1
+            if argmin == 3: gameObject.y = yf2
 
-          # real update
+      # real update
       gameObject.update(timeElapsed)
+
+      # portals
+      self.check_portals(gameObject)
+
+      # update gameObject in the quadtree
+      # TODO
 
   def momentum_trade(self, go1, go2):
     """ momentum (represented as delta-v) imparted ON go2 BY go1
@@ -166,7 +194,7 @@ class Physics(object):
       if go1.id == go2.id:
         continue
 
-      if go1.intersect(go2):
+      if go1.collide(go2):
         dv1 = 0.0
         dv2 = 0.0
 

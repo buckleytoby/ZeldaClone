@@ -40,7 +40,6 @@ class MasterClass(object):
     prefix = r'[GAME_ROOT]' # raw string
     config = os.path.join(prefix, "config", "lvl1.txt")
     lvl1 = ClassHolder(config)
-    lvl1.worldClass = World()
     # load config
     lvl1.loadConfigFile()
     
@@ -64,6 +63,7 @@ class MasterClass(object):
     print("# game objects: {}".format(len(DATA["game_objects_ref"]))) # DEBUG
     DATA["player_xy"] = self.holder.playerClass.gameObject.center_of_mass
       
+  # @profile
   def update(self, seconds, events):
     """ update each part of the game's engine
     """
@@ -100,6 +100,7 @@ class MasterClass(object):
     
     if 'exit' in actions:
       # save & exit
+      global Done
       Done = True # global
 
     if 'interact' in actions:
@@ -114,48 +115,46 @@ class MasterClass(object):
     if 'use_object' in actions:
       pass
 
+# @profile
+def main():
+  # init the clock
+  clock = pygame.time.Clock()
+  FPS = 30
+  seconds = 0.0
+  milli = 0.0
 
+  # init pygame
 
-# init the clock
-clock = pygame.time.Clock()
-FPS = 30
-seconds = 0.0
-milli = 0.0
+  # os.environ['SDL_VIDEO_WINDOW_POS'] = '800,50'
+  os.environ['SDL_VIDEO_CENTERED'] = '1'
+  pygame.init()
+  #logo=pygame.image.load("logo filename")
+  #pygame.display.set_icon(logo)
+  pygame.display.set_caption('Ephiro') #Eponymous Hero -> EpHero -> Ephiro
+  screen=pygame.display.set_mode([int(i) for i in scrsize])
+  World.screen = screen
 
-# init pygame
+  # instantiate starting classes
+  master = MasterClass(screen)
 
-# os.environ['SDL_VIDEO_WINDOW_POS'] = '800,50'
-os.environ['SDL_VIDEO_CENTERED'] = '1'
-pygame.init()
-#logo=pygame.image.load("logo filename")
-#pygame.display.set_icon(logo)
-pygame.display.set_caption('Ephiro') #Eponymous Hero -> EpHero -> Ephiro
-screen=pygame.display.set_mode([int(i) for i in scrsize])
-World.screen = screen
+  # ----------------------------------------------------------------------
+  # main loop:
+  while not Done:
+    screen.fill((0,0,0)) #black background
+    
+    #update game world
+    seconds = clock.tick(FPS) / 1000.0
+    master.update(seconds, pygame.event.get())
+    
+    #write screen
+    master.writeScreen()
 
-# instantiate starting classes
-master = MasterClass(screen)
-
-# ----------------------------------------------------------------------
-# main loop:
-while not Done:
-  screen.fill((0,0,0)) #black background
-  
-  #update game world
-  seconds = clock.tick(FPS) / 1000.0
-  master.update(seconds, pygame.event.get())
-  
-  #write screen
-  master.writeScreen()
-
-  #display screen
-  pygame.display.flip()
-
-if debug_mode:
-  main_tk_dialog.destroy()
+    #display screen
+    pygame.display.flip()
   
   
-  
+if __name__ == "__main__":
+  main()
   
   
   

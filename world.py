@@ -73,7 +73,8 @@ class World(object):
   #class for the map
   count = -1
   screen=None
-  def __init__(self):
+  def __init__(self, class_holder):
+    self.class_holder = class_holder
     
     World.count += 1
     self.id = World.count
@@ -161,8 +162,8 @@ class World(object):
 
       spriteRow=[]
       for tile in self.objectArts[parentType].data:
-        tile = pygame.transform.scale(tile, (int(tileWidth / parent_tile_width * pixelsPerTileWidth), 
-                int(tileHeight / parent_tile_height * pixelsPerTileHeight)))
+        tile = pygame.transform.scale(tile, (int(tileWidth * pixelsPerTileWidth), 
+                int(tileHeight * pixelsPerTileHeight)))
         spriteRow.append(tile)
         
       print("Setting {} art from {}.".format(objectType, parentType))
@@ -175,7 +176,10 @@ class World(object):
     
   def getMap(self, mapType):
     #require all maps to be numpy arrays
-    return self.maps[mapType].getTileData() #think I have to copy
+    if mapType in self.maps:
+      return self.maps[mapType].getTileData() #think I have to copy
+    else:
+      return None
     
   def setParent(self, mapType, parentType):
     self.mapParents[mapType] = parentType
@@ -185,10 +189,12 @@ class World(object):
     tileValue = self.maps[mapType].tileData[i][j]
     return self.tileArt.tiles[tileValue].art
 
+  # # # # @profile
   def can_tile_collide(self, mapType, indices):
     # return False if indices are out of range
     i, j = indices
     data = self.maps[mapType].tileData
+    # TODO: optimize this expression
     if np.all( np.logical_and( np.array((i, j)) > (0, 0), np.array((i, j)) < data.shape ) ):
       tileValue = data[i][j]
       out = self.tileArt.tiles[tileValue].can_collide
@@ -197,18 +203,14 @@ class World(object):
       return False
     
   def convertTileToPixel(self, indices): #offset backwards so that it'll appear correct ????????????
-    pos_tile = np.array(indices, dtype='float')
-    factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
-    pos_pixel = np.multiply(pos_tile, factor) #check syntax
-    return pos_pixel.tolist()
+    pos_pixel = np.multiply(indices, pixel_factor) #check syntax
+    return pos_pixel
 
   def convertPixelToScreen(self, pixelList, screenLocation):
     # subtract the screen location, in tiles, from the pixels
-    pos_pixels = np.array(pixelList, dtype='float')
     pos_screen = np.array(screenLocation, dtype='float')
-    factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
-    out = pos_pixels - np.multiply(pos_screen, factor) #check syntax
-    return out.tolist()
+    out = pixelList - np.multiply(pos_screen, pixel_factor) #check syntax
+    return out
 
     
     
@@ -248,7 +250,7 @@ class World(object):
           if gameObject.visible: gameObject.drawn = False
   
 
-  
+  # # # # # @profile
   def writeScreen(self, gameObjects, gameObjectsARR, screenLocation, screen_rect):
     self.screenLocation = np.array(screenLocation, dtype='float')
     self.screenMaxIDX = self.screenLocation + 1 + np.array( 
@@ -256,6 +258,7 @@ class World(object):
     self.screenLocationX = int(self.screenLocation[0])
     self.screenLocationY = int(self.screenLocation[1])
     
+    # # # # # @profile
     def recurse(mapType): #must check ability to change isDrawn in nested Function, it's bit me before
       if isDrawn[mapType]: #all parents are drawn too, then
         return
@@ -283,7 +286,7 @@ class World(object):
     minIDX_x = int(minIDX_x); minIDX_y = int(minIDX_y)
     return maxIDX_x, maxIDX_y, minIDX_x, minIDX_y
     
-  
+  # # # # @profile
   def drawMap(self, mapType):
     mapARR = self.maps[mapType].tileData
     mapLenX, mapLenY = mapARR.shape
@@ -293,16 +296,35 @@ class World(object):
 
     # add sub-tile offset
     
-    #offset backwards so that it'll appear correct
+    # TODO: offset backwards so that it'll appear correct 
+    pixeli = 0
+    pixelj = 0
+
     for i in range(minIDX_x, maxIDX_x):
       for j in range(minIDX_y, maxIDX_y):
-        if mapARR[i][j] == -1 or mapARR[i][j] == 19:
-          continue
-        xpixel, ypixel = self.convertTileToPixel((i, j))
-        xscreen, yscreen = self.convertPixelToScreen((xpixel, ypixel), self.screenLocation)
-          #(self.screenLocationX, self.screenLocationY))
-        art = self.getTileArt(mapType, (i, j))
-        World.screen.blit(art, (xscreen, yscreen))
+        if not (mapARR[i][j] == -1 or mapARR[i][j] == 19):
+          
+
+
+          # idx_arr = np.array([i, j])
+          # pixel_arr = self.convertTileToPixel(idx_arr)
+
+          # # TODO: we already know xscreen & yscreen because it's just the index (starting from 0) added by the pixelwidth
+          # # # so replace this fcn
+          # xscreen, yscreen = self.convertPixelToScreen(pixel_arr, self.screenLocation)
+          #   #(self.screenLocationX, self.screenLocationY))
+
+          # calculate screen position offset
+          # out = (pixeli, pixelj) - np.multiply(self.screenLocation, pixel_factor) #check syntax
+          offset = -1.0 * (self.screenLocation % 1) * pixel_factor
+          location = (pixeli, pixelj) + offset
+
+          art = self.getTileArt(mapType, (i, j))
+          World.screen.blit(art, location)
+        
+        pixelj += pixelsPerTileHeight
+      pixeli += pixelsPerTileWidth
+      pixelj = 0
 
   def draw_game_objects(self, gameObjects, screen_rect):
     """ iterate through gameobjects and only draw if they're on the screen
@@ -366,6 +388,9 @@ class World(object):
       # debugging: draw the collision box, on top of art
       if self.draw_collision_boxes:
         self.draw_go_rect(go)
+
+        # draw portals too
+        [self.draw_go_rect(portal) for portal in self.class_holder.physicsClass.portals]
       
       go.drawn = True
       

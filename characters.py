@@ -7,7 +7,7 @@ import weapons
 import AI
 
 
-defaultAI = AI.DmgAvoiderAttacker
+defaultAI = AI.Basic #AI.DmgAvoiderAttacker
   
   
 class SoldierFactory(factory.GameObjectFactory):

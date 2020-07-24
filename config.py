@@ -9,6 +9,7 @@ import tkinter
 import scipy.spatial as scSpatial
 from collections import defaultdict
 from threading import Thread
+import threading
 
 #globals
 GAME_ROOT = r"C:\Users\Toby\Documents\github\offworld\ZeldaClone"
@@ -20,6 +21,8 @@ pixelsPerTileWidth = int(scrsize[0]/screenTileWidth)
 pixelsPerTileHeight = int(scrsize[1]/screenTileHeight) #square Tiles
 psuedoPixelsPerTileWidth = int(pixelsPerTileWidth/16) #16 psuedo-pixels per tile
 psuedoPixelsPerTileHeight = int(pixelsPerTileHeight/16) 
+
+pixel_factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
 
 
 # global data-stream for sensing and w/e

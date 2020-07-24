@@ -137,6 +137,14 @@ class GameObject(object):
   def update_heading(self, dy, dx):
     self.heading = np.arctan2(dy, dx)
 
+  def reset_pos(self, new_pos):
+    self.x = new_pos[0]
+    self.y = new_pos[1]
+    
+    # save values
+    self.old_x = self.x
+    self.old_y = self.y
+
   def update(self, seconds):
     # update actual movement
     self.dx_actual = self.x - self.old_x
@@ -175,7 +183,7 @@ class GameObject(object):
     """ returns numpy array """
     return (self.get_heading_orient() * m2d.Vector.e0).array
 
-
+  # # # @profile
   def get_overlap_tiles(self):
     """ get all tile indices which overlap in the form out = [[idx_x1, idx_y1], ..., [idx_xn, idx_yn]]
     """
@@ -224,6 +232,10 @@ class GameObject(object):
   rect = property(get_rect)
   rect_art = property(get_rect_art)
 
+  def calc_pygame_rect(self):
+    self.pygame_rect = self.rect.convert_to_pygame_rect()
+    return self.pygame_rect
+
   def intersect(self, other, art=False):
     """ intersect with other, other can be an object which contains rect, or a Patch directly
     """
@@ -233,6 +245,17 @@ class GameObject(object):
     else:
       if isinstance(other, PatchExt): out = self.rect.intersect(other)
       else: out = self.rect.intersect(other.rect)
+    return out
+
+  def collide(self, other, art=False):
+    """ intersect with other, other can be an object which contains rect, or a Patch directly
+    """
+    if art and self.has_sprite:
+      if isinstance(other, PatchExt): out = self.rect_art.collide(other)
+      else: out = self.rect_art.collide(other.rect_art)
+    else:
+      if isinstance(other, PatchExt): out = self.rect.collide(other)
+      else: out = self.rect.collide(other.rect)
     return out
   
   def get_velocity(self):
@@ -271,3 +294,42 @@ class GameObject(object):
     com_vector = self.com_vector(other)
     dist = np.linalg.norm(com_vector)
     return dist
+
+
+
+class Portal(GameObject):
+  def __init__(self, source, source_id, target, target_id):
+    self.target = np.array(target) # center of cell
+    self.source_id = source_id
+    self.target_id = target_id
+    self.active = True
+    self.active_cooldown = 1.0 # seconds
+    #
+    x = source[0] + 0.25 # make half-tile sized portal centered on tile
+    y = source[1] + 0.25 # make half-tile sized portal centered on tile
+    #
+    super().__init__(drawHitBox = False,
+                     x = x,
+                     y = y,
+                     width = 0.5,
+                     height = 0.5,
+                     moveable = False,
+                     rgb = ((10 + 20*source_id)%250, 0, 0)
+                    )
+
+  def activate(self, go, portals):
+    # @param go: GameObject class object
+    if self.active:
+      go.reset_pos(self.target)
+      self.active_cooldowner()
+      # deactivate the target portal too
+      portals[self.target_id].active = False
+      portals[self.target_id].active_cooldowner()
+
+  def active_cooldowner(self):
+    """ spool up a thread """
+    self.active = False
+    threading.Timer(self.active_cooldown, self.reset_active).start()
+        
+  def reset_active(self):
+    self.active = True
