@@ -22,6 +22,11 @@ Soldier
 
 [source]
 type=gameObjects
+[GAME_ROOT]\art\fireball1.png
+Arrow1
+
+[source]
+type=gameObjects
 [GAME_ROOT]\art\Brosh.png
 Archer
 
@@ -44,4 +49,8 @@ Archer4
 type=childGameObjects
 MiniSoldier Soldier
 MegaSoldier Soldier
+Arrow2 Arrow1
+Arrow3 Arrow1
+Arrow4 Arrow1
+Arrow5 Arrow1
 [end]

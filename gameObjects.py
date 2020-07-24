@@ -183,6 +183,18 @@ class GameObject(object):
     """ returns numpy array """
     return (self.get_heading_orient() * m2d.Vector.e0).array
 
+  @property
+  def projectile_heading(self):
+    if self.objectType == "Player":
+      # take from mouse direction
+      mouse_pos = get_mouse_pos("tiles") + get_screen_location() # from utils
+      origin = self.get_center()
+      vec = mouse_pos - origin
+      dx, dy = vec
+      return np.arctan2(dy, dx)
+    else:
+      return self.heading
+
   # # # @profile
   def get_overlap_tiles(self):
     """ get all tile indices which overlap in the form out = [[idx_x1, idx_y1], ..., [idx_xn, idx_yn]]

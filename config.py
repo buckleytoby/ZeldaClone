@@ -30,6 +30,7 @@ pixel_factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
 game_time
 game_objects_ref
 player_xy
+screen_location - np array
 """
 DATA = {}
 DATA["game_time"] = 0.0

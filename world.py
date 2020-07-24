@@ -248,6 +248,19 @@ class World(object):
         for gameObjectID in gameObjectsMap[i][j]:
           gameObject = gameObjects[gameObjectID]
           if gameObject.visible: gameObject.drawn = False
+
+  def draw_health_bar(self):
+    # https://www.reddit.com/r/pygame/comments/8b1exj/smooth_health_bar/
+    health = self.class_holder.playerClass.gameObject.attacker.health
+    max_health = self.class_holder.playerClass.gameObject.attacker.max_health
+    #
+    if health < max_health and health > 0:
+      r = min(255, 255 - (255 * ((health - (max_health - health)) / max_health)))
+      g = min(255, 255 * (health / (max_health / 2)))
+      color = (r, g, 0)
+      width = int(100 * health / max_health)
+      health_bar = pygame.Rect(5, 5, width, 7)
+      pygame.draw.rect(World.screen, color, health_bar)
   
 
   # # # # # @profile
@@ -276,6 +289,9 @@ class World(object):
       if mapType == "staticObjects":
         recurse(mapType)
 
+    # UI on top
+    self.draw_health_bar()
+
   def clipScreen(self, mapLength):
     maxIDX_x, maxIDX_y = np.clip(self.screenMaxIDX, np.zeros(2), 
       np.array(mapLength))
@@ -303,19 +319,6 @@ class World(object):
     for i in range(minIDX_x, maxIDX_x):
       for j in range(minIDX_y, maxIDX_y):
         if not (mapARR[i][j] == -1 or mapARR[i][j] == 19):
-          
-
-
-          # idx_arr = np.array([i, j])
-          # pixel_arr = self.convertTileToPixel(idx_arr)
-
-          # # TODO: we already know xscreen & yscreen because it's just the index (starting from 0) added by the pixelwidth
-          # # # so replace this fcn
-          # xscreen, yscreen = self.convertPixelToScreen(pixel_arr, self.screenLocation)
-          #   #(self.screenLocationX, self.screenLocationY))
-
-          # calculate screen position offset
-          # out = (pixeli, pixelj) - np.multiply(self.screenLocation, pixel_factor) #check syntax
           offset = -1.0 * (self.screenLocation % 1) * pixel_factor
           location = (pixeli, pixelj) + offset
 

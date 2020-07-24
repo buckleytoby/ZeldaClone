@@ -19,6 +19,9 @@ class Screen(object):
     screenLocation = np.array([x + self.offsetX, y + self.offsetY])
 
     self.screenLocationX, self.screenLocationY = screenLocation.tolist()
+
+    # update global DATA
+    DATA["screen_location"] = screenLocation
   
   def getLocation(self):
     return (self.screenLocationX, self.screenLocationY)
@@ -37,28 +40,35 @@ class Screen(object):
 class Keyboard(object):
   #specify conversion from keyboard event to player action
   def __init__(self):
-    self.convertDict = {pygame.K_LEFT:   'left',
-                        pygame.K_RIGHT:  'right',
-                        pygame.K_UP:     'up',
-                        pygame.K_DOWN:   'down',
+    self.keyboard_convertDict = {pygame.K_a:   'left',
+                        pygame.K_d:  'right',
+                        pygame.K_w:     'up',
+                        pygame.K_s:   'down',
                         pygame.K_SPACE:  'interact',
                         pygame.K_ESCAPE: 'exit',
                         pygame.QUIT:     'exit',
                         pygame.K_e:      'edit',
                         pygame.K_RCTRL: 'attack',
+                        pygame.K_1:     'use_item1',
+                        1:   'attack',
+                        2:   'use_item1',
+                        3:   'interact',
+                        4:   'interact',
+                        5:   'interact',
                         }
+    # https://stackoverflow.com/questions/34287938/how-to-distinguish-left-click-right-click-mouse-clicks-in-pygame 
 
   def get_action(self, key):
-    if key in self.convertDict:
-      #print(self.convertDict[key])
-      return self.convertDict[key]
+    if key in self.keyboard_convertDict:
+      #print(self.keyboard_convertDict[key])
+      return self.keyboard_convertDict[key]
     else:
       return ''
       
   def getRealTimeAction(self, status):
     actions = []
-    for key in self.convertDict:
-      if status[key]: actions.append(self.convertDict[key])
+    for key in self.keyboard_convertDict:
+      if status[key]: actions.append(self.keyboard_convertDict[key])
     return actions
 
 class Logitech():
@@ -72,12 +82,12 @@ class Joystick(Keyboard):
     self.joystick = pygame.joystick.Joystick(0)
     self.joystick.init()
 
-    self.convertDict = {Logitech.A:  '',
+    self.keyboard_convertDict = {Logitech.A:  '',
                         Logitech.LB:     'attack',
                         Logitech.RB:  'interact',
                         }
 
-    self.action_to_button = dict([[v,k] for k,v in self.convertDict.items()])
+    self.action_to_button = dict([[v,k] for k,v in self.keyboard_convertDict.items()])
 
   def continuous_attack(self):
     if self.joystick.get_button(self.action_to_button["attack"]):
@@ -133,6 +143,8 @@ class Player(AI.Basic):
       elif event.type == pygame.JOYBUTTONDOWN:
         # with members: joy (which joystick), button
         action = self.joystick.get_action(event.button)
+      elif event.type == pygame.MOUSEBUTTONDOWN:
+        action = self.keyboard.get_action(event.button)
       else:
         action = ""
       #
@@ -145,8 +157,9 @@ class Player(AI.Basic):
         print('edit mode')
       if action is 'attack': self.cbs_to_call.append(action)
         
-    # real-time events
+    # real-time events -- meaning, keys that are continuously held down
     status = pygame.key.get_pressed()
+    status_mouse = pygame.mouse.get_pressed()
     if self.use_joystick:
       movement = self.joystick.get_direction()
       # scale by squaring, for more sensitivity at smaller joystick values
@@ -167,6 +180,13 @@ class Player(AI.Basic):
       if abs(dx) > 0.0 and abs(dy) > 0.0: #moving diagonally
         dx *= 0.707106
         dy *= 0.707106
+
+      # continuous weapon
+      if self.gameObject.attacker.weapon.is_continuous and "attack" not in self.cbs_to_call:
+        # keys = [i for i in range(3) if status_mouse[i]]
+        # action = self.keyboard.get_action(event.button)
+        if status_mouse[0]: 
+          self.cbs_to_call.append("attack")
       
     # scale to max velocity
     dx *= self.gameObject.max_velocity

@@ -36,8 +36,8 @@ class ClassHolder(object):
 
   def __init__(self, configFile):
     self.configFile = process_file_name(configFile)
-    self.worldClass   = World(self)
     self.playerClass  = Player()
+    self.worldClass   = World(self)
     self.physicsClass = Physics(self.playerClass)
     # game objects dict
     self.gameObjects = {}
@@ -56,7 +56,10 @@ class ClassHolder(object):
                  "Archer3": Archer3Factory(),
                  "Archer4": Archer4Factory(),
                   }
-
+    
+    # add weapons to the list of factories
+    for weapon in weapons.weapons_list:
+      self.factories[weapon.name] = weapon
     
   # # # # @profile
   def writeScreen(self):

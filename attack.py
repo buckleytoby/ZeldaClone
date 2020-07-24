@@ -75,9 +75,14 @@ class Attacker(object):
         # weapon factory
         self.change_weapon(weapon)
         self.health = 100.0
+        self.max_health = self.health
         self.disabled = False # whether can attack
         self.invincible = False # whether can get hit
         self.invincible_cooldown = 1.0
+
+    def set_health(self, health):
+        self.health = health
+        self.max_health = self.health
 
     def change_weapon(self, weapon):
         self.weapon = weapon

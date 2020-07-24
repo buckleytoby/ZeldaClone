@@ -7,7 +7,8 @@ import weapons
 import AI
 
 
-defaultAI = AI.Basic #AI.DmgAvoiderAttacker
+defaultAI = AI.DmgAvoiderAttacker
+# defaultAI = AI.Basic 
   
   
 class SoldierFactory(factory.GameObjectFactory):
@@ -56,7 +57,7 @@ class PlayerFactory(SoldierFactory):
     object = super(SoldierFactory, self).create(x, y)
 
     # set health
-    object.attacker.health = 200.0
+    object.attacker.set_health(200.0)
 
     # callbacks
     getattr(object, 'callbacks')['attack'] = object.attacker.attack

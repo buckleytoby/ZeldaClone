@@ -1,7 +1,14 @@
 
 from config       import *
 
-
+def get_mouse_pos(units):
+    # units == "tiles" means the 'in-game' units
+    # units == "pixels" means the 'pygame' units
+    mouse_pos = np.array(pygame.mouse.get_pos(), dtype='float')
+    if units == "pixels":
+        return mouse_pos
+    else:
+        return np.divide(mouse_pos, pixel_factor)
 
 def parse_data(raw_line):
   #print(raw_line)
@@ -188,6 +195,9 @@ def get_game_time():
 
 def get_game_objects():
     return DATA["game_objects_ref"]
+
+def get_screen_location():
+    return DATA["screen_location"]
 
 def center_to_limits(input):
     center, size = np.array(input[0]), np.array(input[1])

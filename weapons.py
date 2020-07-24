@@ -86,7 +86,7 @@ class StraightLine(AI.Basic):
         return out, cbs
 
 
-class StraightProjectile(attack.DamageObj):
+class StraightProjectile(attack.DamageObj): # this is a game object (inherited)
 
     def __init__(self, **kwargs):
         """
@@ -113,6 +113,12 @@ class Arrow1FCT(SoldierWeapon1FCT):
         self.is_continuous = True
 
         self.__dict__.update(kwargs)
+        
+        # set values
+        self.values['artWidth']      = self.w
+        self.values['artHeight']     = self.h
+        self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change
+        self.values['pixelHeight'] = 16 # size of the sprite image, depends on image size, shouldn't change
 
         # reset creator
         self.creator = StraightProjectile
@@ -130,11 +136,11 @@ class Arrow1FCT(SoldierWeapon1FCT):
             objectType = self.name,
             power = self.power,
             mass = self.mass,
-            heading = go.heading,
+            heading = go.projectile_heading,
             max_velocity = self.max_velocity)
 
         # DEBUG
-        made.setSpriteStatus(visible=True)
+        made.setSpriteStatus(visible=True, has_sprite=True)
         # pdb.set_trace()
         return made
 
