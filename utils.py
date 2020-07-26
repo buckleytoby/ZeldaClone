@@ -45,6 +45,11 @@ class Parser(object):
     def close(self):
         self.doc.close()
 
+def make_rect(xy, wh):
+    x, y = [xy[0], xy[0] + wh[0]], [xy[1], xy[1] + wh[1]]
+    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
+    return rect
+
 class PatchExt(m2d.geometry.Patch):
     
     def __init__(self, xxyy_limits):

@@ -128,16 +128,53 @@ class ClassHolder(object):
       
       layers = data["layers"]
       for layer in layers:
-        map_type = layer["name"]
-        map_matrix = np.array(layer["data"], dtype='int') - 1 #Tiled is 1 indexed, so null tiles are value -1
-        map_matrix = np.reshape(map_matrix, (height, width)).T # must tranpose due to Tiled coord sys
-        self.worldClass.setMap(map_type, map_matrix)
+        if layer["type"] == "tilelayer":
+          map_type = layer["name"]
+          map_matrix = np.array(layer["data"], dtype='int') - 1 #Tiled is 1 indexed, so null tiles are value -1
+          map_matrix = np.reshape(map_matrix, (height, width)).T # must tranpose due to Tiled coord sys
+          self.worldClass.setMap(map_type, map_matrix)
 
-        # children
-        if "properties" in layer:
-          props = layer["properties"]
-          for prop in props:
-            if prop["name"] == "child": self.worldClass.set_child(map_type, prop["value"])
+          # children
+          if "properties" in layer:
+            props = layer["properties"]
+            for prop in props:
+              if prop["name"] == "child": self.worldClass.set_child(map_type, prop["value"])
+
+        # objects
+        elif layer["type"] == "objectgroup":
+          if layer["name"] == "trigger_areas":
+            for object in layer["objects"]:
+              """
+              "height":64,
+                 "id":2,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"test",
+                         "type":"object",
+                         "value":5
+                        }, 
+                        {
+                         "name":"trigger",
+                         "type":"string",
+                         "value":"boss1"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":112,
+                 "x":3504,
+                 "y":352
+              """
+              xy = np.divide( np.array([object[key] for key in ['x', 'y']]), pixel_factor)
+              wh = np.divide( np.array([object[key] for key in ['width', 'height']]), pixel_factor)
+              rect = utils.make_rect(xy, wh)
+              props = object["properties"]
+              for prop in props:
+                if prop["name"] == "trigger":
+                  register_event(rect, prop["value"])
+
+      # trigger areas
 
     # nowhere better to put this
     self.instantiate_game_objects()

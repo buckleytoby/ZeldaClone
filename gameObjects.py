@@ -42,11 +42,16 @@ class Animation(object):
   def getSpriteIndex(self):
     return self.index2sprite[self.face][self.animationIndex]
 
+class StaticGameObject(object):
+  id = -1
+  def __init__(self, **kwargs):
+
 class GameObject(object):
   # class for any objects found in the game, 
   # basically if it has a hitbox, it's a game object
   id = -1
   def __init__(self, **kwargs):
+    super().__init__(**kwargs)
     GameObject.id += 1
     self.id = GameObject.id
     self.type = "game_object"
@@ -214,13 +219,11 @@ class GameObject(object):
   def get_rect_total_movement(self):
     """ get pygame Rect of the object between last position and this position
     """
-    # TODO
+    # TODO: finish fcn
     lt = [self.x, self.y]
     wh = [self.width, self.height]
     #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
-    x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
-    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
-    return rect
+    return utils.make_rect(lt, wh)
 
   def get_rect(self):
     """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
@@ -228,19 +231,15 @@ class GameObject(object):
     lt = [self.x, self.y]
     wh = [self.width, self.height]
     #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
-    x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
-    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
-    return rect
+    return utils.make_rect(lt, wh)
 
   def get_rect_art(self):
     """ get pygame Rect of the object's art. i.e. the portion that can be collided with.
     """
     lt = self.getArtPosition_tiles()
     wh = [self.artWidth, self.artHeight]
-    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
-    x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
-    rect = PatchExt([x, y]) # xxyy_limits' a sequence of two pairs: [[x_low, x_high], [y_low, y_high]]
-    return rect
+    return utils.make_rect(lt, wh)
+
   rect = property(get_rect)
   rect_art = property(get_rect_art)
 
@@ -345,3 +344,5 @@ class Portal(GameObject):
         
   def reset_active(self):
     self.active = True
+
+class HealthBar(GameObject)
