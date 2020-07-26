@@ -116,7 +116,7 @@ class Player(AI.Basic):
     except:
       self.joystick = None
       self.use_joystick = False
-    self.weapon_idx = 1
+    self.weapon_idx = 3
 
     self.cbs_to_call = []
 

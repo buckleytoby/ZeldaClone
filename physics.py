@@ -45,8 +45,8 @@ class Physics(object):
     # use a quadtree
     tree = utils.QuadTree(go_list, depth=6)
 
-    # get rect for the active screen
-    screen = self.playerClass.screenClass.get_footprint_rect().convert_to_pygame_rect()
+    # get rect for the active screen, expanded by a bit
+    screen = self.playerClass.screenClass.get_footprint_rect().scale(0.15).convert_to_pygame_rect()
 
     hits = tree.hit(screen)
     active_gos = {go.id: go for go in hits}
@@ -130,6 +130,8 @@ class Physics(object):
           # pdb.set_trace()
           
           if gameObject.collide(rect):
+            if isinstance(gameObject, attack.DamageObj) and gameObject.die_on_impact:
+              gameObject.die()
             # pdb.set_trace()
             # see which direction is less distance to move
             
@@ -222,16 +224,25 @@ class Physics(object):
     go: game-object to take damage
     """
     dv = 0.0
+
     # friendly-fire off
     if not do.team_id == go.team_id:
+      # remove damage object
+      if do.die_on_impact: do.die()
+
       # confirm go can take damage
       if hasattr(go, "attacker"):
-        hit = go.attacker.receive_damage(go, do.power)
+        hit = go.attacker.receive_damage(go, do)
 
         # blowback
         if hit:
           dv = self.momentum_trade(do, go)
           # print("dv: {}".format(dv))
+
+          # sound fx
+          if hasattr(go, "hitSoundFX"):
+            tup = utils.make_sound_msg(go.hitSoundFX)
+            MESSAGES.put(tup)
 
     return dv
 

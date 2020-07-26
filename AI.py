@@ -73,7 +73,7 @@ class Basic_Attacker(Follower):
     dv, dist = self.get_dv()
 
     if self.wait:
-      out = {'dv': np.zeros(2)}
+      out = {'dv': dv}
     else:
       out = {'dv': dv}
       # attack if close enough
@@ -81,6 +81,7 @@ class Basic_Attacker(Follower):
         cbs.append("attack")
 
         # trigger cool-down
+        self.wait = True
         threading.Timer(self.cooldown, self.reset_wait).start()
 
     return out, cbs
@@ -167,3 +168,74 @@ class DmgAvoiderAttacker(AvoiderAttacker):
 
     out = math_utils.normalize(direction)
     return out
+
+class Boss1Phase1(Basic):
+  # move from side to side, firing ball on chains
+  def __init__(self, *args):
+    super().__init__(*args)
+    self.wait = False
+    self.b_move = True
+    self.attack_cooldown = 0.87
+    self.move_cooldown = 10.0
+    self.dist_threshold = 1.5
+
+    # TODO: don't trigger until boss is activated
+    self.toggle_move()
+
+  def reset_wait(self):
+    self.wait = False
+
+  def toggle_move(self): 
+    self.b_move = not self.b_move
+    threading.Timer(self.move_cooldown, self.toggle_move).start()
+
+  def get_dv(self):
+    if self.b_move: # move right
+      dv = np.array([1, 0]) * self.parent.max_velocity
+    else: # move left
+      dv = np.array([-1, 0]) * self.parent.max_velocity
+    return dv
+
+  def get_action(self):
+    cbs = []
+    dv = self.get_dv()
+
+    out = {'dv': dv}
+    if not self.wait:
+      cbs.append("attack")
+
+      # trigger cool-down
+      self.wait = True
+      threading.Timer(self.attack_cooldown, self.reset_wait).start()
+
+    return out, cbs
+
+class Boss1Phase2(Basic_Attacker):
+  # chase player around
+  def __init__(self, *args):
+    super().__init__(*args)
+    self.cooldown = 0.79
+    self.dist_threshold = 10.0
+    self.max_dist_threshold = 20.0
+    
+class Boss1Phase2(Basic_Attacker):
+  # fire spread of straight projectiles
+  def __init__(self, *args):
+    pass
+
+class Boss1Meta(Basic):
+  # manage Boss AI's and switch between them
+  def __init__(self, *args):
+    super().__init__(*args)
+
+    self.AIs = [Boss1Phase1(*args),
+                Boss1Phase2(*args),
+                ]
+    self.health_cutoffs = [67]
+
+  def get_action(self):
+    percent = 100.0 * self.parent.attacker.health / self.parent.attacker.max_health
+    if percent > self.health_cutoffs[0]:
+      return self.AIs[0].get_action()
+    else:
+      return self.AIs[1].get_action()

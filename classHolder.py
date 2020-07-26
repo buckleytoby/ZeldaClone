@@ -22,6 +22,8 @@ class ClassHolder(object):
                       6: 'Archer2',
                       7: 'Archer3',
                       8: 'Archer4',
+                      9: 'BallOnChainGuy',
+                      10: 'Boss1',
                       }
 
   obsolete = {'Player': 1,
@@ -55,6 +57,8 @@ class ClassHolder(object):
                  "Archer2": Archer2Factory(),
                  "Archer3": Archer3Factory(),
                  "Archer4": Archer4Factory(),
+                 "BallOnChainGuy": BallOnChainGuyFactory(),
+                 "Boss1": Boss1(),
                   }
     
     # add weapons to the list of factories
@@ -74,7 +78,7 @@ class ClassHolder(object):
       GEN_OBJ
       DEL_OBJ
     """
-    valid_cmds = ["GEN_OBJ", "DEL_OBJ"]
+    valid_cmds = ["GEN_OBJ", "DEL_OBJ", "PLAY_SOUND"]
 
     while not MESSAGES.empty():
       msg = MESSAGES.get()
@@ -83,6 +87,9 @@ class ClassHolder(object):
       if cmd in valid_cmds:
         fcn = getattr(self, cmd)
         fcn(msg[1])
+
+  def PLAY_SOUND(self, name):
+    self.worldClass.sounds[name].play()
 
   def GEN_OBJ(self, obj):
     x = obj.x
@@ -122,9 +129,15 @@ class ClassHolder(object):
       layers = data["layers"]
       for layer in layers:
         map_type = layer["name"]
-        map_matrix = np.array(layer["data"], dtype='int') - 1 #Tiled is 1 indexed
+        map_matrix = np.array(layer["data"], dtype='int') - 1 #Tiled is 1 indexed, so null tiles are value -1
         map_matrix = np.reshape(map_matrix, (height, width)).T # must tranpose due to Tiled coord sys
         self.worldClass.setMap(map_type, map_matrix)
+
+        # children
+        if "properties" in layer:
+          props = layer["properties"]
+          for prop in props:
+            if prop["name"] == "child": self.worldClass.set_child(map_type, prop["value"])
 
     # nowhere better to put this
     self.instantiate_game_objects()
@@ -231,14 +244,38 @@ class ClassHolder(object):
             clear = False
           file_name = process_file_name(line)
           self.worldClass.loadGameObjects(file_name, f, self.factories, clear=clear)
+          
+        elif type == 'sound':
+          line = f.parse_lines()
+          if line == 'clear':
+            self.worldClass.sounds.clear()
+            line = f.parse_lines()
+          file_name = process_file_name(line)
+          name = f.parse_lines()
+          soundObj = pygame.mixer.Sound(file_name)
+          self.worldClass.sounds[name] = soundObj
+
+        elif type == 'music':
+          line = f.parse_lines()
+          if line == 'clear':
+            self.worldClass.music.clear()
+            line = f.parse_lines()
+          file_name = process_file_name(line)
+          name = f.parse_lines()
+          self.worldClass.music[name] = file_name
 
         elif type == 'childGameObjects':
           self.worldClass.load_child_objects(f, self.factories)
       
         elif type == 'tiles':
           line = f.parse_lines()
+          if line == 'clear':
+            clear = True
+            line = f.parse_lines()
+          else:
+            clear = False
           file_name = process_file_name(line)
-          self.worldClass.load_tiles(file_name, 16, 16)
+          self.worldClass.load_tiles(file_name, 16, 16, clear=clear)
           count = 0
           while line != '[end]':
             line = f.parse_lines()

@@ -47,6 +47,7 @@ class Map(object):
   def __init__(self):
     self.invisible = False
     self.tileData = []
+    self.children = []
     #self.gameObjectData = []
     #self.gameObjects = None
 
@@ -63,6 +64,7 @@ class Map(object):
     return self.tileData
 
   def get_rect(self, i, j):
+    # independent of tile type
     lt = float(i), float(j)
     wh = [1.0, 1.0]
     x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
@@ -85,13 +87,16 @@ class World(object):
     self.objectArts = {}
     self.neighborMaps = [] #which maps are connected to this one
     self.edit=False #whether or not in edit mode
+    self.sounds = {}
+    self.music = {}
 
     # --- debugging ---
     self.draw_collision_boxes = False
     
-  def load_tiles(self, imagefile, width, height):
+  def load_tiles(self, imagefile, width, height, clear=False):
     #reads in image, resets tileArt, fills with tiles
-    self.tileArt.clear()
+    if clear:
+      self.tileArt.clear()
 
     image = pygame.image.load(imagefile).convert_alpha()
     imgw, imgh = image.get_size()
@@ -175,7 +180,8 @@ class World(object):
     self.maps[mapType].setTileData(data) #think I have to copy
     
   def getMap(self, mapType):
-    #require all maps to be numpy arrays
+    # Gets the map tile data
+    # require all maps to be numpy arrays
     if mapType in self.maps:
       return self.maps[mapType].getTileData() #think I have to copy
     else:
@@ -183,6 +189,9 @@ class World(object):
     
   def setParent(self, mapType, parentType):
     self.mapParents[mapType] = parentType
+
+  def set_child(self, mapType, childType):
+    self.maps[mapType].children.append( childType )
     
   def getTileArt(self, mapType, indices):
     i, j = indices
@@ -197,7 +206,10 @@ class World(object):
     # TODO: optimize this expression
     if np.all( np.logical_and( np.array((i, j)) > (0, 0), np.array((i, j)) < data.shape ) ):
       tileValue = data[i][j]
-      out = self.tileArt.tiles[tileValue].can_collide
+      if tileValue < 0: # null tile
+        return True
+      else:
+        out = self.tileArt.tiles[tileValue].can_collide
       return out
     else:
       return False
@@ -249,19 +261,22 @@ class World(object):
           gameObject = gameObjects[gameObjectID]
           if gameObject.visible: gameObject.drawn = False
 
-  def draw_health_bar(self):
+  def draw_health_bar(self, go, xy, wh):
     # https://www.reddit.com/r/pygame/comments/8b1exj/smooth_health_bar/
-    health = self.class_holder.playerClass.gameObject.attacker.health
-    max_health = self.class_holder.playerClass.gameObject.attacker.max_health
+    health = go.attacker.health
+    max_health = go.attacker.max_health
     #
     if health < max_health and health > 0:
       r = min(255, 255 - (255 * ((health - (max_health - health)) / max_health)))
       g = min(255, 255 * (health / (max_health / 2)))
       color = (r, g, 0)
-      width = int(100 * health / max_health)
-      health_bar = pygame.Rect(5, 5, width, 7)
+      wh[0] = int( wh[0] * health / max_health)
+      health_bar = pygame.Rect(xy, wh)
       pygame.draw.rect(World.screen, color, health_bar)
-  
+
+  def draw_player_health(self):
+    go = self.class_holder.playerClass.gameObject
+    self.draw_health_bar(go, [5, 5], [100, 7])
 
   # # # # # @profile
   def writeScreen(self, gameObjects, gameObjectsARR, screenLocation, screen_rect):
@@ -272,15 +287,15 @@ class World(object):
     self.screenLocationY = int(self.screenLocation[1])
     
     # # # # # @profile
-    def recurse(mapType): #must check ability to change isDrawn in nested Function, it's bit me before
-      if isDrawn[mapType]: #all parents are drawn too, then
+    def recurse(mapType): #must check ability to change isDrawn in nested Function, it has bit me before
+      map = self.maps[mapType]
+      if isDrawn[mapType]:
         return
-      elif mapType in self.mapParents:
-        parentType = self.mapParents[mapType]
-        recurse(parentType)
+      elif map.children: # not empty list
+        [recurse(childType) for childType in map.children]
       #draw it
       isDrawn[mapType] = True
-      if self.maps[mapType].invisible: return
+      if map.invisible: return
       self.drawMap(mapType)
       self.draw_game_objects(gameObjects, screen_rect)
       
@@ -290,7 +305,7 @@ class World(object):
         recurse(mapType)
 
     # UI on top
-    self.draw_health_bar()
+    self.draw_player_health()
 
   def clipScreen(self, mapLength):
     maxIDX_x, maxIDX_y = np.clip(self.screenMaxIDX, np.zeros(2), 

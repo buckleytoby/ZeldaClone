@@ -145,6 +145,20 @@ class PatchExt(m2d.geometry.Patch):
         out = PatchExt(xxyy_limits)
         return out
 
+    def scale(self, percent):
+        # scale by percent but keep the center the same
+        # returns a new rect object
+        center = self.center
+        new_w = (1.0 + percent) * self.width
+        new_h = (1.0 + percent) * self.height
+
+        lt = center - 0.5 * np.array([new_w, new_h])
+        wh = [new_w, new_h]
+
+        x, y = [lt[0], lt[0] + wh[0]], [lt[1], lt[1] + wh[1]]
+        new_rect = PatchExt([x, y])
+        return new_rect
+
     # required functions for pygame Rect & quadtree compliance
     def collidelist(self, list):
         idx = -1
@@ -181,6 +195,10 @@ def make_del_msg(obj):
     tup = ("DEL_OBJ", obj)
     return tup
 
+def make_sound_msg(name):
+    tup = ("PLAY_SOUND", name)
+    return tup
+
 def make_gen_msg(obj):
     tup = ("GEN_OBJ", obj)
     return tup
@@ -189,6 +207,11 @@ def die(obj):
     """ add self to the del list """
     tup = make_del_msg(obj)
     MESSAGES.put(tup)
+
+    if hasattr(obj, "deathSoundFX"):
+        tup = make_sound_msg(obj.deathSoundFX)
+        MESSAGES.put(tup)
+    
 
 def get_game_time():
     return DATA["game_time"]

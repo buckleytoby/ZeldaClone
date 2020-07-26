@@ -1,10 +1,10 @@
 [source]
 type=tiles
+clear
 [GAME_ROOT]\art\tiles.png
 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 
 [end]
-
 
 # loading the map
 [json_map]
@@ -46,11 +46,38 @@ type=gameObjects
 Archer4
 
 [source]
+type=gameObjects
+[GAME_ROOT]\art\spike1.png
+BallOnChain1
+
+[source]
 type=childGameObjects
 MiniSoldier Soldier
 MegaSoldier Soldier
+BallOnChainGuy Archer
 Arrow2 Arrow1
 Arrow3 Arrow1
 Arrow4 Arrow1
 Arrow5 Arrow1
+BallOnChain2 BallOnChain1
 [end]
+
+[source]
+type=sound
+[GAME_ROOT]\sounds\death1.wav
+death1
+
+[source]
+type=sound
+[GAME_ROOT]\sounds\grunt1.wav
+grunt1
+
+[source]
+type=sound
+[GAME_ROOT]\sounds\pew1.wav
+pew1
+
+[source]
+type=music
+[GAME_ROOT]\sounds\song1.wav
+song1

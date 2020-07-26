@@ -5,6 +5,7 @@ import factory
 import attack
 import weapons
 import AI
+import inventory
 
 
 defaultAI = AI.DmgAvoiderAttacker
@@ -25,12 +26,18 @@ class SoldierFactory(factory.GameObjectFactory):
     self.values['objectType'] = 'Soldier'
     self.values['type'] = "character"
     self.values['team_id'] = 1
+    self.values['hitSoundFX'] = 'grunt1'
+    self.values['deathSoundFX'] = 'death1'
+    self.values['weapon'] = weapons.soldierWeapon1FCT
     self.ai_class = defaultAI
 
   
   def create(self, x, y):
-    self.values['attacker'] = attack.Attacker(weapons.soldierWeapon1FCT) # want unique instance
+    self.values['attacker'] = attack.Attacker(self.values['weapon']) # want unique instance
     object = super(SoldierFactory, self).create(x, y)
+
+    # set health
+    if 'health' in self.values: object.attacker.set_health(self.values['health'])
 
     # set AI type
     object.AI = self.ai_class(object)
@@ -50,11 +57,13 @@ class PlayerFactory(SoldierFactory):
     self.values['artWidth']      = 1.0
     self.values['artHeight']     = 1.5
     self.values['team_id'] = 0
+    self.values['weapon'] = weapons.playerWeapon1FCT
 
   def create(self, x, y):
     # self.values['attacker'] = attack.Attacker(weapons.playerWeapon1FCT) # want unique instance
-    self.values['attacker'] = attack.Attacker(weapons.weapons_list[0]) # want unique instance
-    object = super(SoldierFactory, self).create(x, y)
+    self.values['attacker'] = attack.Attacker(self.values['weapon']) # want unique instance
+    self.values['inventory'] = inventory.Inventory()
+    object = super().create(x, y)
 
     # set health
     object.attacker.set_health(200.0)
@@ -108,16 +117,23 @@ class ArcherFactory(factory.GameObjectFactory):
     self.values['objectType'] = 'Archer' # for drawing purposes
     self.values['type'] = "character"
     self.values['team_id'] = 1
+    self.values['weapon'] = weapons.arrow5FCT
+    self.values['hitSoundFX'] = 'grunt1'
+    self.values['deathSoundFX'] = 'death1'
     self.ai_class = defaultAI
   
   def create(self, x, y):
-    self.values['attacker'] = attack.Attacker(weapons.arrow5FCT) # want unique instance
+    self.values['attacker'] = attack.Attacker(self.values['weapon']) # want unique instance
     object = super().create(x, y)
+
+    # set health
+    if 'health' in self.values: object.attacker.set_health(self.values['health'])
 
     # set AI type
     object.AI = self.ai_class(object)
     object.AI.dist_threshold = 5.5
     # object.AI = AI.Basic(object)
+
 
     # callbacks
     getattr(object, 'callbacks')['attack'] = object.attacker.attack
@@ -138,3 +154,21 @@ class Archer4Factory(ArcherFactory):
   def __init__(self):
     super().__init__()
     self.values['objectType'] = 'Archer4' # for drawing purposes
+
+class BallOnChainGuyFactory(ArcherFactory):
+  def __init__(self):
+    super().__init__()
+    self.values['objectType'] = 'Soldier' # for drawing purposes
+    self.values['weapon'] = weapons.ballOnChain2FCT
+    self.values['health'] = 100.0
+    self.values['max_velocity'] = 1.0
+    self.values['armor'] = ["projectile"]
+
+class Boss1(MegaSoldierFactory):
+  def __init__(self):
+    super().__init__()
+    self.values['weapon'] = weapons.ballOnChainFCT
+    self.values['health'] = 300.0
+    self.values['max_velocity'] = 1.0
+    self.values['armor'] = ["projectile"]
+    self.ai_class = AI.Boss1Meta

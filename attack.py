@@ -14,6 +14,9 @@ class DamageObj(gameObjects.GameObject):
         self.parent_id = None
         self.duration = None
         self.power = 0.0
+        self.dead = False
+        self.die_on_impact = True # against tiles or go's
+        self.dmg_type = "pure"
 
         # internal usage
         self.t0 = 0.0
@@ -64,17 +67,19 @@ class DamageObj(gameObjects.GameObject):
         self.die()
 
     def die(self):
-        """ add self to the del list """
-        tup = make_del_msg(self)
-        # print(tup[1].id)
-        MESSAGES.put(tup)
+        if not self.dead:
+            self.dead = True
+            """ add self to the del list """
+            tup = make_del_msg(self)
+            # print(tup[1].id)
+            MESSAGES.put(tup)
 
 class Attacker(object):
     """ Attack Module Class. Held by game-object """
     def __init__(self, weapon):
         # weapon factory
         self.change_weapon(weapon)
-        self.health = 100.0
+        self.health = 50.0
         self.max_health = self.health
         self.disabled = False # whether can attack
         self.invincible = False # whether can get hit
@@ -109,21 +114,24 @@ class Attacker(object):
     def reset_disabled(self):
         self.disabled = False
 
-    def receive_damage(self, go, power):
+    def receive_damage(self, go, do):
         """ return True if damage was received """
         if not self.invincible:
-            self.health -= power
-            print("Hit {} with {} health left".format(go.objectType, self.health))
+            # check armor against projectiles
+            if not (hasattr(go, "armor") and do.dmg_type in go.armor):
 
-            # die, if applicable
-            if self.health < 0.0:
-                die(go)
+                self.health -= do.power
+                print("Hit {} with {} health left".format(go.objectType, self.health))
 
-            # trigger invincibility frames
-            self.invincible_cooldowner()
+                # die, if applicable
+                if self.health < 0.0:
+                    die(go)
 
-            # generate effects
+                # trigger invincibility frames
+                self.invincible_cooldowner()
 
-            return True
-        else:
-            return False
+                # generate effects
+
+                return True
+
+        return False

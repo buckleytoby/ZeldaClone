@@ -40,8 +40,14 @@ class MasterClass(object):
     prefix = r'[GAME_ROOT]' # raw string
     config = os.path.join(prefix, "config", "lvl1.txt")
     lvl1 = ClassHolder(config)
+    
     # load config
     lvl1.loadConfigFile()
+
+    # play background music
+    pygame.mixer.music.load(lvl1.worldClass.music["song1"])
+    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.play(-1)
     
     # main game
     config = os.path.join(prefix, "config", "main.txt")

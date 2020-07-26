@@ -1,6 +1,7 @@
 
 from config       import *
 from utils        import *
+import math_utils
 import factory
 import AI
 import attack
@@ -86,13 +87,14 @@ class StraightLine(AI.Basic):
         return out, cbs
 
 
-class StraightProjectile(attack.DamageObj): # this is a game object (inherited)
+class StraightProjectile(attack.DamageObj): # this is also a game object (inheritance)
 
     def __init__(self, **kwargs):
         """
         Must over-write AI, and set a constant heading
         """
         assert( "heading" in kwargs )
+        kwargs["dmg_type"] = "projectile"
         super().__init__(**kwargs)
         self.AI = StraightLine(self)
 
@@ -111,6 +113,7 @@ class Arrow1FCT(SoldierWeapon1FCT):
         self.max_velocity = 5.0
         self.cooldown = 0.1
         self.is_continuous = True
+        self.soundFX = "pew1"
 
         self.__dict__.update(kwargs)
         
@@ -141,6 +144,11 @@ class Arrow1FCT(SoldierWeapon1FCT):
 
         # DEBUG
         made.setSpriteStatus(visible=True, has_sprite=True)
+
+        # sound fx
+        tup = make_sound_msg(self.soundFX)
+        MESSAGES.put(tup)
+
         # pdb.set_trace()
         return made
 
@@ -169,3 +177,97 @@ weapons_list.append( arrow2FCT )
 weapons_list.append( arrow3FCT )
 weapons_list.append( arrow4FCT )
 weapons_list.append( arrow5FCT )
+
+
+
+
+
+class BallOnChain(AI.Basic):
+    # circular motion around caster
+
+    def get_action(self):
+        """ get direction from heading and project velocity in that direction
+        """
+        pivot_pt = self.parent.go_position() # recall, the parent for the AI is the DamageObj
+        pos = self.parent.get_center()
+        orient = m2d.Orientation(np.pi / 2.0) # 90 deg turn
+        vec = (orient * m2d.Vector(pos-pivot_pt)).array
+        unit = math_utils.normalize(vec)
+        
+        dv = self.parent.max_velocity * unit
+        out = {'dv': dv}
+        cbs = []
+        return out, cbs
+
+class BallOnChainProjectile(attack.DamageObj): # this is a game object (inherited)
+
+    def __init__(self, **kwargs):
+        """
+        Must over-write AI, and set a constant heading
+        """
+        super().__init__(**kwargs)
+        self.AI = BallOnChain(self)
+
+class BallOnChainFCT(Arrow1FCT):
+    def __init__(self, **kwargs):
+        super().__init__()
+
+        self.name = "BallOnChain1"
+        self.w = 1.0 # width of hitbox
+        self.h = 1.0 # height of hitbox
+        self.ox = 0.75 # offset of hitbox (to center)
+        self.oy = 0.0 # offset of hitbox (to center)
+        self.duration = 2.0
+        self.power = 34.0
+        self.mass = 2000.0 # determines weapon blow-back
+        self.max_velocity = 10.0
+        self.cooldown = 0.2
+        self.is_continuous = True
+
+        self.__dict__.update(kwargs)
+        
+        # set values
+        self.values['artWidth']      = self.w
+        self.values['artHeight']     = self.h
+        self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change
+        self.values['pixelHeight'] = 16 # size of the sprite image, depends on image size, shouldn't change
+
+        # reset creator
+        self.creator = BallOnChainProjectile
+
+    def make(self, go):
+        """ @param go: the game object which is calling this make fcn
+        make the object. Origin of rect is in center 
+        ltf = local transform (i.e. from the parent to the child)
+        """
+        # make the object -- this includes sending a reference to the go-list
+        made = self.create(
+            rect = self.make_rect(go), 
+            parent_id = go.id,
+            team_id = go.team_id,
+            duration = self.duration,
+            objectType = self.name,
+            power = self.power,
+            mass = self.mass,
+            go_position = go.get_center,
+            max_velocity = self.max_velocity)
+
+        # DEBUG
+        made.setSpriteStatus(visible=True, has_sprite=True)
+
+        # sound fx
+        tup = make_sound_msg(self.soundFX)
+        MESSAGES.put(tup)
+
+        # pdb.set_trace()
+        return made
+
+
+ballOnChainFCT = BallOnChainFCT()
+weapons_list.append( ballOnChainFCT )
+
+ballOnChain2FCT = BallOnChainFCT(name="BallOnChain2",
+                      cooldown = 2.0,
+                      )
+
+weapons_list.append( ballOnChain2FCT )
