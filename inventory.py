@@ -1,5 +1,6 @@
 from config       import *
 from utils        import *
+import weapons
 from collections import defaultdict
 
 class Item():
@@ -9,7 +10,8 @@ class Item():
         self.count = 1
 
 class Inventory():
-    def __init__(self):
+    def __init__(self, parent):
+        self.parent = parent
         self.items = {} # default item count: 0
         self.hotkeys = {}
 
@@ -23,7 +25,7 @@ class Inventory():
     def use_item(self, name):
         item = self.items[name]
         if item.count > 0:
-            item.use()
+            item.use(self.parent)
             item.count -= 1
 
     def set_hotkey(self, key, name):
@@ -32,20 +34,35 @@ class Inventory():
 
 class Potion(Item):
     # potion
-    def __init__(self, parent, amount):
+    def __init__(self, amount):
         # @param parent: gameObject who carries this item
         # @param amount: amount to heal parent by
         super().__init__(self.use_fcn)
-        self.parent = parent
         self.amount = amount
         self.name = "Potion"
 
-    def use_fcn(self):
+    def use_fcn(self, parent):
         # increase parent's health by amount, but no more than max health
-        val = np.min([self.parent.attacker.health + self.amount, self.parent.attacker.max_health])
-        self.parent.attacker.health = val
+        val = np.min([parent.attacker.health + self.amount, parent.attacker.max_health])
+        parent.attacker.health = val
 
-        print(self.parent.objectType+" used potion")
+        print(parent.objectType+" used potion")
 
         # play sound
         pass
+
+class Boss1Weapon1(Item):
+    def __init__(self):
+        super().__init__(self.use_fcn)
+        self.name = "Boss1Weapon1"
+
+    def use_fcn(self, parent):
+        parent.attacker.change_weapon(weapons.ballOnChainFCT)
+
+class Boss1Weapon2(Item):
+    def __init__(self):
+        super().__init__(self.use_fcn)
+        self.name = "Boss1Weapon2"
+
+    def use_fcn(self, parent):
+        parent.attacker.change_weapon(weapons.spreadShotBoss1Phase3)

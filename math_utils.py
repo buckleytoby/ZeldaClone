@@ -12,3 +12,8 @@ def eucl_dist(vec1, vec2):
     # dist = np.sum( np.abs( vec1 - vec2) )
     dist = scSpatial.distance.cityblock(vec1, vec2)
     return dist
+
+def dir_to_target(me, target):
+    vector = target - me
+    unit_direction = zero_protection_divide(vector, np.linalg.norm(vector))
+    return unit_direction

@@ -66,6 +66,7 @@ class MasterClass(object):
     """ update holder, and update DATA """
     self.holder = holder
     DATA["game_objects_ref"] = self.holder.gameObjects
+    DATA["trigger_areas_ref"] = self.holder.trigger_areas
     print("# game objects: {}".format(len(DATA["game_objects_ref"]))) # DEBUG
     DATA["player_xy"] = self.holder.playerClass.gameObject.center_of_mass
       

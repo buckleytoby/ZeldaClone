@@ -49,6 +49,6 @@ class PotionFactory(ItemFactory):
 
   def item_maker(self, go):
       # item depends on which game object picks it up
-      return inventory.Potion(go, 50.0)
+      return inventory.Potion(50.0)
 
 potionFactory = PotionFactory()

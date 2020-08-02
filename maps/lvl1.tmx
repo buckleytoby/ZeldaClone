@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="249" height="148" tilewidth="16" tileheight="16" infinite="0" nextlayerid="7" nextobjectid="9">
+<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="249" height="148" tilewidth="16" tileheight="16" infinite="0" nextlayerid="7" nextobjectid="12">
  <editorsettings>
   <export target="lvl1.json" format="json"/>
  </editorsettings>
@@ -634,10 +634,23 @@
     <property name="trigger" value="boss1"/>
    </properties>
   </object>
-  <object id="5" x="3483.33" y="162.667" width="157.333" height="132.667"/>
+  <object id="5" x="3542.33" y="189.167" width="35.833" height="39.167">
+   <properties>
+    <property name="trigger" value="boss1center"/>
+   </properties>
+  </object>
  </objectgroup>
  <objectgroup id="6" name="spawns">
-  <object id="8" type="Potion" x="3502" y="342.5">
+  <object id="8" type="Potion" x="3481.5" y="337">
+   <point/>
+  </object>
+  <object id="9" type="Potion" x="3449" y="303">
+   <point/>
+  </object>
+  <object id="10" type="Potion" x="3668.5" y="309.5">
+   <point/>
+  </object>
+  <object id="11" type="Potion" x="3635.5" y="333">
    <point/>
   </object>
  </objectgroup>

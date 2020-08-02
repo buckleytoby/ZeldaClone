@@ -215,13 +215,32 @@ class Boss1Phase2(Basic_Attacker):
   def __init__(self, *args):
     super().__init__(*args)
     self.cooldown = 0.79
-    self.dist_threshold = 10.0
+    self.dist_threshold = 15.0
     self.max_dist_threshold = 20.0
     
-class Boss1Phase2(Basic_Attacker):
+class Boss1Phase3(Basic_Attacker):
   # fire spread of straight projectiles
   def __init__(self, *args):
-    pass
+    super().__init__(*args)
+    self.dist_threshold = 15.0
+    self.max_dist_threshold = 25.0
+
+  def get_dv(self):
+    obj_target = utils.get_trigger_area('boss1center')
+    if obj_target:
+      target = obj_target.rect.center
+      unit_dir = math_utils.dir_to_target(self.position, target)
+      dist = np.linalg.norm(target - self.position)
+      if dist > 0.1:
+        dv = unit_dir * self.parent.max_velocity
+      else:
+        dv = np.zeros(2)
+        dist = 0.0
+    else:
+      dv = np.zeros(2)
+      dist = 0.0
+
+    return dv, dist
 
 class Boss1Meta(Basic):
   # manage Boss AI's and switch between them
@@ -230,12 +249,27 @@ class Boss1Meta(Basic):
 
     self.AIs = [Boss1Phase1(*args),
                 Boss1Phase2(*args),
+                Boss1Phase3(*args),
                 ]
-    self.health_cutoffs = [67]
+    self.health_cutoffs = [67, 33]
+
+    self.active_ai = self.AIs[0]
+    self.b_phase2 = False
+    self.b_phase3 = False
+
+  def update(self):
+    percent = 100.0 * self.parent.attacker.health / self.parent.attacker.max_health
+    if not self.b_phase2 and percent < self.health_cutoffs[0]:
+      self.b_phase2 = True
+      self.active_ai = self.AIs[1]
+    elif not self.b_phase3 and percent < self.health_cutoffs[1]:
+      self.b_phase3 = True
+      self.active_ai = self.AIs[2]
+      # change weapon
+      self.parent.inventory.use_item("Boss1Weapon2")
+
 
   def get_action(self):
-    percent = 100.0 * self.parent.attacker.health / self.parent.attacker.max_health
-    if percent > self.health_cutoffs[0]:
-      return self.AIs[0].get_action()
-    else:
-      return self.AIs[1].get_action()
+    self.update()
+    return self.active_ai.get_action()
+    

@@ -219,7 +219,13 @@ def die(obj):
     if hasattr(obj, "deathSoundFX"):
         tup = make_sound_msg(obj.deathSoundFX)
         MESSAGES.put(tup)
-    
+
+def get_trigger_area(name):
+    dd = DATA["trigger_areas_ref"]
+    if name in dd:
+        return dd[name]
+    else:
+        return None
 
 def get_game_time():
     return DATA["game_time"]

@@ -186,7 +186,63 @@ weapons_list.append( arrow3FCT )
 weapons_list.append( arrow4FCT )
 weapons_list.append( arrow5FCT )
 
+class SpreadShot(Arrow1FCT):
+    # multi-directional spread shot, centered on target
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.name = "SpreadShot"
 
+        self.nb_projectiles = 3
+        self.spread_angle = np.deg2rad(90.0)
+
+        self.__dict__.update(kwargs)
+        assert(self.nb_projectiles > 1)
+
+    def make(self, go):
+        """ make the object. Origin of rect is in center 
+        ltf = local transform (i.e. from the parent to the child)
+        """
+        # check mana
+        if self.mana_cost <= 0 or go.attacker.mana >= self.mana_cost:
+            go.attacker.mana -= self.mana_cost
+
+            heading = go.projectile_heading
+            for i in range(self.nb_projectiles):
+                angle = heading + self.spread_angle * ( -0.5 + float(i) / (self.nb_projectiles - 1))
+
+
+                # make the object -- this includes sending a reference to the go-list
+                made = self.create(
+                    rect = self.make_rect(go), 
+                    parent_id = go.id,
+                    team_id = go.team_id,
+                    duration = self.duration,
+                    objectType = self.name,
+                    power = self.power,
+                    mass = self.mass,
+                    heading = angle,
+                    max_velocity = self.max_velocity)
+
+                # DEBUG
+                made.setSpriteStatus(visible=True, has_sprite=True)
+
+            # sound fx
+            tup = make_sound_msg(self.soundFX)
+            MESSAGES.put(tup)
+
+            # pdb.set_trace()
+            return made
+        else:
+            return None
+
+spreadShot = SpreadShot()
+spreadShotBoss1Phase3 = SpreadShot(name = "SpreadShotBoss1Phase3",
+                                   nb_projectiles = 12,
+                                   spread_angle = np.deg2rad(360.0),
+                                    )
+
+weapons_list.append(spreadShot)
+weapons_list.append(spreadShotBoss1Phase3)
 
 
 

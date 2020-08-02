@@ -64,6 +64,8 @@ Arrow2 Arrow1
 Arrow3 Arrow1
 Arrow4 Arrow1
 Arrow5 Arrow1
+SpreadShot Arrow1
+SpreadShotBoss1Phase3 Arrow1
 BallOnChain2 BallOnChain1
 [end]
 

@@ -9,7 +9,10 @@ from factory      import *
 from characters   import *
 from item_objects import *
 
-
+class TriggerAreas():
+  def __init__(self, name, dict):
+    self.name = name
+    self.__dict__.update(dict)
 
 class ClassHolder(object):
   #hold all of the classes for a level
@@ -46,8 +49,13 @@ class ClassHolder(object):
     self.gameObjects = {}
     self.gameObjectsARR = []
 
+    # trigger areas
+    self.trigger_areas = {}
+
+
     # add to data
     DATA["game_objects_ref"] = self.gameObjects
+    DATA["trigger_areas_ref"] = self.trigger_areas
 
     # group the factories
     self.factories = {'Soldier': SoldierFactory(),
@@ -160,7 +168,10 @@ class ClassHolder(object):
                 for prop in props:
                   if prop["name"] == "trigger":
                     # register_event(rect, prop["value"])
-                    pass
+                    name = prop["value"]
+                    obj = TriggerAreas(name, {'rect': rect})
+                    self.trigger_areas[name] = obj
+
           elif layer['name'] == 'spawns': # assume all points
             for object in layer["objects"]:
               x, y = np.divide( np.array([object[key] for key in ['x', 'y']]), TILE_SIZE)

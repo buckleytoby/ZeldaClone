@@ -98,15 +98,21 @@
                  "y":352
                 }, 
                 {
-                 "height":132.667,
+                 "height":39.167,
                  "id":5,
                  "name":"",
+                 "properties":[
+                        {
+                         "name":"trigger",
+                         "type":"string",
+                         "value":"boss1center"
+                        }],
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":157.333,
-                 "x":3483.33,
-                 "y":162.667
+                 "width":35.8330000000001,
+                 "x":3542.33,
+                 "y":189.167
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -128,8 +134,44 @@
                  "type":"Potion",
                  "visible":true,
                  "width":0,
-                 "x":3502,
-                 "y":342.5
+                 "x":3481.5,
+                 "y":337
+                }, 
+                {
+                 "height":0,
+                 "id":9,
+                 "name":"",
+                 "point":true,
+                 "rotation":0,
+                 "type":"Potion",
+                 "visible":true,
+                 "width":0,
+                 "x":3449,
+                 "y":303
+                }, 
+                {
+                 "height":0,
+                 "id":10,
+                 "name":"",
+                 "point":true,
+                 "rotation":0,
+                 "type":"Potion",
+                 "visible":true,
+                 "width":0,
+                 "x":3668.5,
+                 "y":309.5
+                }, 
+                {
+                 "height":0,
+                 "id":11,
+                 "name":"",
+                 "point":true,
+                 "rotation":0,
+                 "type":"Potion",
+                 "visible":true,
+                 "width":0,
+                 "x":3635.5,
+                 "y":333
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -138,7 +180,7 @@
          "y":0
         }],
  "nextlayerid":7,
- "nextobjectid":9,
+ "nextobjectid":12,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.4.1",

@@ -62,7 +62,6 @@ class PlayerFactory(SoldierFactory):
   def create(self, x, y):
     # self.values['attacker'] = attack.Attacker(weapons.playerWeapon1FCT) # want unique instance
     self.values['attacker'] = attack.Attacker(self.values['weapon']) # want unique instance
-    self.values['inventory'] = inventory.Inventory()
     object = super().create(x, y)
 
     # set health
@@ -70,10 +69,10 @@ class PlayerFactory(SoldierFactory):
     object.attacker.mana_regen = 10.0 # mana per second
 
     # give an inventory
-    object.inventory = inventory.Inventory()
+    object.inventory = inventory.Inventory(object)
 
     # give 5 small health potions
-    potion = inventory.Potion(object, 50.0)
+    potion = inventory.Potion(50.0)
     potion.count = 5
     object.inventory.add_item(potion)
 
@@ -181,3 +180,27 @@ class Boss1(MegaSoldierFactory):
     self.values['max_velocity'] = 1.0
     self.values['armor'] = ["projectile"]
     self.ai_class = AI.Boss1Meta
+
+  
+  def create(self, x, y):
+    self.values['attacker'] = attack.Attacker(self.values['weapon']) # want unique instance
+    object = super(SoldierFactory, self).create(x, y)
+
+    # set health
+    if 'health' in self.values: object.attacker.set_health(self.values['health'])
+    
+    # give an inventory
+    object.inventory = inventory.Inventory(object)
+    object.inventory.add_item(inventory.Boss1Weapon1())
+    object.inventory.add_item(inventory.Boss1Weapon2())
+
+    # set AI type
+    object.AI = self.ai_class(object)
+    # object.AI = AI.Basic(object)
+
+    # callbacks
+    getattr(object, 'callbacks')['attack'] = object.attacker.attack
+
+    # setup
+    object.setSpriteStatus(visible=True, has_sprite=True)
+    return object
