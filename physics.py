@@ -43,12 +43,12 @@ class Physics(object):
     [go.calc_pygame_rect() for go in go_list]
 
     # use a quadtree
-    tree = utils.QuadTree(go_list, depth=6)
+    self.go_tree = utils.QuadTree(go_list, depth=6)
 
     # get rect for the active screen, expanded by a bit
     screen = self.playerClass.screenClass.get_footprint_rect().scale(0.15).convert_to_pygame_rect()
 
-    hits = tree.hit(screen)
+    hits = self.go_tree.hit(screen)
     active_gos = {go.id: go for go in hits}
     return active_gos
 
@@ -62,6 +62,16 @@ class Physics(object):
   #     if math_utils.eucl_dist(player_xy, gameObject.position) < 20:
   #       out[key] = gameObject
   #   return out
+
+  def passive_update(self, dt, game_objects):
+    # mana
+    for id in game_objects:
+      go = game_objects[id]
+      if hasattr(go, "attacker"):
+        if go.attacker.mana_regen > 0.0 and go.attacker.mana < go.attacker.max_mana:
+          val = np.min([go.attacker.mana + go.attacker.mana_regen * dt, go.attacker.max_mana])
+          go.attacker.mana = val
+
       
   # @profile
   def update(self, timeElapsed, all_game_objects, worldClass, mapType):
@@ -78,6 +88,9 @@ class Physics(object):
     gameObjects = self.get_active_game_objects(all_game_objects)
     if not gameObjects:
       return
+
+    # passive update
+    self.passive_update(timeElapsed, gameObjects)
 
     # first, update each game-objects location
     for key in gameObjects:

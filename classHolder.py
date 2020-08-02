@@ -7,6 +7,7 @@ from gameObjects  import *
 from physics      import *
 from factory      import *
 from characters   import *
+from item_objects import *
 
 
 
@@ -59,6 +60,7 @@ class ClassHolder(object):
                  "Archer4": Archer4Factory(),
                  "BallOnChainGuy": BallOnChainGuyFactory(),
                  "Boss1": Boss1(),
+                 'Potion': potionFactory,
                   }
     
     # add weapons to the list of factories
@@ -78,7 +80,7 @@ class ClassHolder(object):
       GEN_OBJ
       DEL_OBJ
     """
-    valid_cmds = ["GEN_OBJ", "DEL_OBJ", "PLAY_SOUND"]
+    valid_cmds = ["GEN_OBJ", "DEL_OBJ", "PLAY_SOUND", "CHANGE_MUSIC"]
 
     while not MESSAGES.empty():
       msg = MESSAGES.get()
@@ -87,6 +89,12 @@ class ClassHolder(object):
       if cmd in valid_cmds:
         fcn = getattr(self, cmd)
         fcn(msg[1])
+
+  def CHANGE_MUSIC(self, song_name):
+    obj = self.worldClass.music[song_name]
+    pygame.mixer.music.load(obj)
+    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.play(-1)
 
   def PLAY_SOUND(self, name):
     self.worldClass.sounds[name].play()
@@ -105,7 +113,7 @@ class ClassHolder(object):
     
   def add_game_object(self, x, y, object):
     self.gameObjects[object.id] = object
-    self.gameObjectsARR[int(x)][int(y)].append(object.id)
+    # self.gameObjectsARR[int(x)][int(y)].append(object.id)
 
   def remove_game_object(self, obj):
     del self.gameObjects[obj.id]
@@ -144,35 +152,24 @@ class ClassHolder(object):
         elif layer["type"] == "objectgroup":
           if layer["name"] == "trigger_areas":
             for object in layer["objects"]:
-              """
-              "height":64,
-                 "id":2,
-                 "name":"",
-                 "properties":[
-                        {
-                         "name":"test",
-                         "type":"object",
-                         "value":5
-                        }, 
-                        {
-                         "name":"trigger",
-                         "type":"string",
-                         "value":"boss1"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":112,
-                 "x":3504,
-                 "y":352
-              """
-              xy = np.divide( np.array([object[key] for key in ['x', 'y']]), pixel_factor)
-              wh = np.divide( np.array([object[key] for key in ['width', 'height']]), pixel_factor)
+              xy = np.divide( np.array([object[key] for key in ['x', 'y']]), TILE_SIZE)
+              wh = np.divide( np.array([object[key] for key in ['width', 'height']]), TILE_SIZE)
               rect = utils.make_rect(xy, wh)
-              props = object["properties"]
-              for prop in props:
-                if prop["name"] == "trigger":
-                  register_event(rect, prop["value"])
+              if "properties" in object:
+                props = object["properties"]
+                for prop in props:
+                  if prop["name"] == "trigger":
+                    # register_event(rect, prop["value"])
+                    pass
+          elif layer['name'] == 'spawns': # assume all points
+            for object in layer["objects"]:
+              x, y = np.divide( np.array([object[key] for key in ['x', 'y']]), TILE_SIZE)
+              type = object['type']
+              if type in self.factories:
+                object = self.factories[type].create(x, y)
+                self.add_game_object( x, y, object )
+              else:
+                print("Unable to spawn object: {}".format(type))
 
       # trigger areas
 

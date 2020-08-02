@@ -110,10 +110,33 @@ class MasterClass(object):
       Done = True # global
 
     if 'interact' in actions:
+      # gather gameobjects within reach
+      rect = self.holder.playerClass.gameObject.reach_rect.convert_to_pygame_rect()
+      hits = self.holder.physicsClass.go_tree.hit(rect)
+      gos = {go.id: go for go in hits}
+      
+      for id in gos:
+        go = self.holder.gameObjects[id]
+        # use doors
+        if go.type == "door":
+          pass
+
+        # pick up items
+        elif go.type == "item":
+          # make item
+          item = go.item_maker(self.holder.playerClass.gameObject)
+
+          # add item
+          self.holder.playerClass.gameObject.inventory.add_item(item)
+
+          # destroy go
+          die(go)
+
       # if self.holder == self.title:
       #   pass
         # self.holder = self.main
 
+    if 'switch_weapon' in actions:
       # switch weapon
       self.holder.playerClass.next_weapon()
       print("Switched to: {}".format( self.holder.playerClass.gameObject.attacker.weapon.name ) )

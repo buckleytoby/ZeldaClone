@@ -52,9 +52,9 @@ class Keyboard(object):
                         pygame.K_1:     'use_item1',
                         1:   'attack',
                         2:   'use_item1',
-                        3:   'interact',
-                        4:   'interact',
-                        5:   'interact',
+                        3:   'switch_weapon',
+                        4:   'switch_weapon',
+                        5:   'switch_weapon',
                         }
     # https://stackoverflow.com/questions/34287938/how-to-distinguish-left-click-right-click-mouse-clicks-in-pygame 
 
@@ -150,11 +150,15 @@ class Player(AI.Basic):
       #
       if action not in actions:
         actions.append(action)
-      if action is 'interact': pass
+      if action is 'interact':
+        pass
+
+
       if action is 'exit':     Done = True
       if action is 'edit':
         #turn on edit mode
         print('edit mode')
+      if action == "use_item1": self.gameObject.inventory.use_item("Potion")
       if action is 'attack': self.cbs_to_call.append(action)
         
     # real-time events -- meaning, keys that are continuously held down

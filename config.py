@@ -22,6 +22,8 @@ pixelsPerTileHeight = int(scrsize[1]/screenTileHeight) #square Tiles
 psuedoPixelsPerTileWidth = int(pixelsPerTileWidth/16) #16 psuedo-pixels per tile
 psuedoPixelsPerTileHeight = int(pixelsPerTileHeight/16) 
 
+TILE_SIZE = np.array([16.0, 16.0])
+
 pixel_factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
 
 

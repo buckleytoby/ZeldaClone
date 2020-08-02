@@ -81,6 +81,9 @@ class Attacker(object):
         self.change_weapon(weapon)
         self.health = 50.0
         self.max_health = self.health
+        self.mana = 100.0
+        self.max_mana = self.mana
+        self.mana_regen = 0.0
         self.disabled = False # whether can attack
         self.invincible = False # whether can get hit
         self.invincible_cooldown = 1.0
@@ -95,8 +98,9 @@ class Attacker(object):
 
     def attack(self, **kwargs):
         if not self.disabled:
-            self.weapon.make(**kwargs)
-            self.attack_cooldowner()
+            obj = self.weapon.make(**kwargs) # returns the made object if succesful, otherwise None
+            if obj:
+                self.attack_cooldowner()
 
     def attack_cooldowner(self):
         """ spool up a thread """

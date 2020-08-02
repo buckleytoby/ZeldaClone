@@ -37,7 +37,7 @@ class Factory2(object):
 class GameObjectFactory(Factory):
   # factory class for creating game objects
   def __init__(self):
-    super(GameObjectFactory, self).__init__(gameObjects.GameObject) #check syntax
+    super().__init__(gameObjects.GameObject) #check syntax
     
   def create(self, x, y):
     kwargs = {}
@@ -45,10 +45,10 @@ class GameObjectFactory(Factory):
     kwargs['y'] = y
     kwargs['old_x'] = x
     kwargs['old_y'] = y
-    created = super(GameObjectFactory, self).create(**kwargs)
+    created = super().create(**kwargs)
     return created
 
 class DamageObjFactory(Factory):
   # factory class for creating damage objects
     def __init__(self):
-        super(DamageObjFactory, self).__init__(attack.DamageObj) #check syntax
+        super().__init__(attack.DamageObj) #check syntax

@@ -204,6 +204,9 @@ def make_sound_msg(name):
     tup = ("PLAY_SOUND", name)
     return tup
 
+def make_music_msg(name):
+    return ("CHANGE_MUSIC", name)
+
 def make_gen_msg(obj):
     tup = ("GEN_OBJ", obj)
     return tup

@@ -51,6 +51,11 @@ type=gameObjects
 BallOnChain1
 
 [source]
+type=gameObjects
+[GAME_ROOT]\art\potion1.png
+Potion
+
+[source]
 type=childGameObjects
 MiniSoldier Soldier
 MegaSoldier Soldier

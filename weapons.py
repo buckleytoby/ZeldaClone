@@ -112,6 +112,7 @@ class Arrow1FCT(SoldierWeapon1FCT):
         self.mass = 2000.0 # determines weapon blow-back
         self.max_velocity = 5.0
         self.cooldown = 0.1
+        self.mana_cost = 0.0
         self.is_continuous = True
         self.soundFX = "pew1"
 
@@ -130,27 +131,33 @@ class Arrow1FCT(SoldierWeapon1FCT):
         """ make the object. Origin of rect is in center 
         ltf = local transform (i.e. from the parent to the child)
         """
-        # make the object -- this includes sending a reference to the go-list
-        made = self.create(
-            rect = self.make_rect(go), 
-            parent_id = go.id,
-            team_id = go.team_id,
-            duration = self.duration,
-            objectType = self.name,
-            power = self.power,
-            mass = self.mass,
-            heading = go.projectile_heading,
-            max_velocity = self.max_velocity)
+        # check mana
+        if self.mana_cost > 0 and go.attacker.mana >= self.mana_cost:
+            go.attacker.mana -= self.mana_cost
 
-        # DEBUG
-        made.setSpriteStatus(visible=True, has_sprite=True)
+            # make the object -- this includes sending a reference to the go-list
+            made = self.create(
+                rect = self.make_rect(go), 
+                parent_id = go.id,
+                team_id = go.team_id,
+                duration = self.duration,
+                objectType = self.name,
+                power = self.power,
+                mass = self.mass,
+                heading = go.projectile_heading,
+                max_velocity = self.max_velocity)
 
-        # sound fx
-        tup = make_sound_msg(self.soundFX)
-        MESSAGES.put(tup)
+            # DEBUG
+            made.setSpriteStatus(visible=True, has_sprite=True)
 
-        # pdb.set_trace()
-        return made
+            # sound fx
+            tup = make_sound_msg(self.soundFX)
+            MESSAGES.put(tup)
+
+            # pdb.set_trace()
+            return made
+        else:
+            return None
 
 arrow1FCT = Arrow1FCT()
 arrow2FCT = Arrow1FCT(name="Arrow2",
@@ -164,7 +171,8 @@ arrow3FCT = Arrow1FCT(name="Arrow3",
 arrow4FCT = Arrow1FCT(name="Arrow4",
                       cooldown = 0.25,
                       w = 1.5, # width of hitbox
-                      h = 1.5 # height of hitbox
+                      h = 1.5, # height of hitbox
+                      mana_cost = 20.0,
                       )
 arrow5FCT = Arrow1FCT(name="Arrow5",
                       cooldown = 1.0,

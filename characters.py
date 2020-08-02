@@ -67,6 +67,15 @@ class PlayerFactory(SoldierFactory):
 
     # set health
     object.attacker.set_health(200.0)
+    object.attacker.mana_regen = 10.0 # mana per second
+
+    # give an inventory
+    object.inventory = inventory.Inventory()
+
+    # give 5 small health potions
+    potion = inventory.Potion(object, 50.0)
+    potion.count = 5
+    object.inventory.add_item(potion)
 
     # callbacks
     getattr(object, 'callbacks')['attack'] = object.attacker.attack

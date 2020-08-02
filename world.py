@@ -1,6 +1,7 @@
 
 from config       import *
 from utils        import *
+import characters
 
 
 
@@ -261,12 +262,25 @@ class World(object):
           gameObject = gameObjects[gameObjectID]
           if gameObject.visible: gameObject.drawn = False
 
+  def draw_mana_bar(self, go, xy, wh):
+    # https://www.reddit.com/r/pygame/comments/8b1exj/smooth_health_bar/
+    value = go.attacker.mana
+    max_value = go.attacker.max_mana
+    #
+    if value > 0: # value < max_value and
+      b = min(255, 255 - (255 * ((value - (max_value - value)) / max_value)))
+      g = min(255, 255 * (value / (max_value)))
+      color = (0, 0, g)
+      wh[0] = int( wh[0] * value / max_value)
+      value_bar = pygame.Rect(xy, wh)
+      pygame.draw.rect(World.screen, color, value_bar)
+  
   def draw_health_bar(self, go, xy, wh):
     # https://www.reddit.com/r/pygame/comments/8b1exj/smooth_health_bar/
     health = go.attacker.health
     max_health = go.attacker.max_health
     #
-    if health < max_health and health > 0:
+    if health > 0: # health < max_health and
       r = min(255, 255 - (255 * ((health - (max_health - health)) / max_health)))
       g = min(255, 255 * (health / (max_health / 2)))
       color = (r, g, 0)
@@ -277,6 +291,10 @@ class World(object):
   def draw_player_health(self):
     go = self.class_holder.playerClass.gameObject
     self.draw_health_bar(go, [5, 5], [100, 7])
+
+  def draw_player_mana(self):
+    go = self.class_holder.playerClass.gameObject
+    self.draw_mana_bar(go, [5, 17], [100, 7])
 
   # # # # # @profile
   def writeScreen(self, gameObjects, gameObjectsARR, screenLocation, screen_rect):
@@ -306,6 +324,7 @@ class World(object):
 
     # UI on top
     self.draw_player_health()
+    self.draw_player_mana()
 
   def clipScreen(self, mapLength):
     maxIDX_x, maxIDX_y = np.clip(self.screenMaxIDX, np.zeros(2), 
@@ -434,12 +453,29 @@ class TitleScreen(World):
     
     
     
+class Event():
+    def __init__(self):
+
+      self.fcn
+
+    def triggered(self):
+      raise NotImplementedError
+
+
+class Boss1Event(Event):
+    def __init__(self):
+      pass
     
     
-    
-    
-    
-    
+    def triggered(self):
+      # spawn Boss1 at center of spawn box
+      boss1 = factories["boss1"].create(x, y)
+      make_gen_msg(boss1)
+
+      # change music
+      make_music_msg("boss1")
+
+      # make health bar game object on top layer
     
     
     

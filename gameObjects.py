@@ -45,16 +45,9 @@ class Animation(object):
 class StaticGameObject(object):
   id = -1
   def __init__(self, **kwargs):
-
-class GameObject(object):
-  # class for any objects found in the game, 
-  # basically if it has a hitbox, it's a game object
-  id = -1
-  def __init__(self, **kwargs):
-    super().__init__(**kwargs)
     GameObject.id += 1
     self.id = GameObject.id
-    self.type = "game_object"
+    self.type = "static_object"
     #-------------- default values --------------
     # hitbox
     self.drawHitBox = False
@@ -67,10 +60,6 @@ class GameObject(object):
     self.width = 0.0
     self.height = 0.0
     self.heading = 0.0 # from 0 to 2pi
-    # physics
-    self.moveable = True
-    self.mass = 70.0
-    self.friction = 0.01
     # visuals
     self.visible = False
     self.has_sprite = False #False --> rect
@@ -82,11 +71,6 @@ class GameObject(object):
     self.artHeight = 0.0
     self.artXOffset = 0.0
     self.artYOffset = 0.0
-    #------------------------------------------
-    # intelligence
-    self.AI = AI.Basic(self)
-    self.team_id = 0
-    self.callbacks = {}
 
     # instantiate from rect
     if "rect" in kwargs:
@@ -99,8 +83,6 @@ class GameObject(object):
     #------------------------------------------
     # over-ride default values
     self.__dict__.update(kwargs)
-    self.old_x = self.x
-    self.old_y = self.y
     
   def setSpriteStatus(self, visible, has_sprite=False):
     if visible:
@@ -141,7 +123,86 @@ class GameObject(object):
 
   def update_heading(self, dy, dx):
     self.heading = np.arctan2(dy, dx)
+    
+  def reset_pos(self, new_pos):
+    self.x = new_pos[0]
+    self.y = new_pos[1]
+  
+  def get_position(self):
+    return np.array([self.x, self.y])
+  position = property(get_position)
 
+  def get_center(self):
+    return np.array([self.x + 0.5 * self.width, self.y + 0.5 * self.height])
+    
+  def get_center_tf(self):
+    pos = self.get_center()
+    tf = m2d.Transform(self.heading, pos)
+    return tf
+
+  def get_heading_orient(self):
+    return m2d.Orientation(self.heading)
+
+  def get_heading_unit_direction(self):
+    """ returns numpy array """
+    return (self.get_heading_orient() * m2d.Vector.e0).array
+
+  def get_reach_rect(self):
+    # the rect surrounding the game object that they can reach
+
+    lt = [self.x - self.reach, self.y - self.reach]
+    wh = [self.width + 2.0 * self.reach, self.height + 2.0 * self.reach]
+
+    return make_rect(lt, wh)
+
+  reach_rect = property(get_reach_rect)
+  
+  def get_rect(self):
+    """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
+    """
+    lt = [self.x, self.y]
+    wh = [self.width, self.height]
+    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
+    return make_rect(lt, wh)
+
+  def get_rect_art(self):
+    """ get pygame Rect of the object's art. i.e. the portion that can be collided with.
+    """
+    lt = self.getArtPosition_tiles()
+    wh = [self.artWidth, self.artHeight]
+    return make_rect(lt, wh)
+
+  rect = property(get_rect)
+  rect_art = property(get_rect_art)
+
+  def calc_pygame_rect(self):
+    self.pygame_rect = self.rect.convert_to_pygame_rect()
+    return self.pygame_rect
+
+class GameObject(StaticGameObject):
+  # class for any objects found in the game, 
+  # basically if it has a hitbox, it's a game object
+  id = -1
+  def __init__(self, **kwargs):
+    super().__init__(**kwargs)
+    self.type = "game_object"
+    # physics
+    self.moveable = True
+    self.mass = 70.0
+    self.friction = 0.01
+    self.reach = 2.0 # tile reach for interactions
+    #------------------------------------------
+    # intelligence
+    self.AI = AI.Basic(self)
+    self.team_id = 0
+    self.callbacks = {}
+      
+    #------------------------------------------
+    # over-ride default values
+    self.__dict__.update(kwargs)
+    self.old_x = self.x
+    self.old_y = self.y
+    
   def reset_pos(self, new_pos):
     self.x = new_pos[0]
     self.y = new_pos[1]
@@ -168,25 +229,6 @@ class GameObject(object):
 
     if self.has_sprite:
       self.animation.updateSprite(self.dx_actual, self.dy_actual)
-
-  def get_position(self):
-    return np.array([self.x, self.y])
-  position = property(get_position)
-
-  def get_center(self):
-    return np.array([self.x + 0.5 * self.width, self.y + 0.5 * self.height])
-
-  def get_center_tf(self):
-    pos = self.get_center()
-    tf = m2d.Transform(self.heading, pos)
-    return tf
-
-  def get_heading_orient(self):
-    return m2d.Orientation(self.heading)
-
-  def get_heading_unit_direction(self):
-    """ returns numpy array """
-    return (self.get_heading_orient() * m2d.Vector.e0).array
 
   @property
   def projectile_heading(self):
@@ -224,28 +266,6 @@ class GameObject(object):
     wh = [self.width, self.height]
     #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
     return utils.make_rect(lt, wh)
-
-  def get_rect(self):
-    """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
-    """
-    lt = [self.x, self.y]
-    wh = [self.width, self.height]
-    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
-    return utils.make_rect(lt, wh)
-
-  def get_rect_art(self):
-    """ get pygame Rect of the object's art. i.e. the portion that can be collided with.
-    """
-    lt = self.getArtPosition_tiles()
-    wh = [self.artWidth, self.artHeight]
-    return utils.make_rect(lt, wh)
-
-  rect = property(get_rect)
-  rect_art = property(get_rect_art)
-
-  def calc_pygame_rect(self):
-    self.pygame_rect = self.rect.convert_to_pygame_rect()
-    return self.pygame_rect
 
   def intersect(self, other, art=False):
     """ intersect with other, other can be an object which contains rect, or a Patch directly
@@ -345,4 +365,6 @@ class Portal(GameObject):
   def reset_active(self):
     self.active = True
 
-class HealthBar(GameObject)
+class HealthBar(StaticGameObject):
+  def __init__(self):
+    pass

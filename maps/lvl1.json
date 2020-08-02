@@ -98,15 +98,38 @@
                  "y":352
                 }, 
                 {
-                 "height":132.666666666667,
+                 "height":132.667,
                  "id":5,
                  "name":"",
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":157.333333333333,
-                 "x":3483.33333333333,
-                 "y":162.666666666667
+                 "width":157.333,
+                 "x":3483.33,
+                 "y":162.667
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":6,
+         "name":"spawns",
+         "objects":[
+                {
+                 "height":0,
+                 "id":8,
+                 "name":"",
+                 "point":true,
+                 "rotation":0,
+                 "type":"Potion",
+                 "visible":true,
+                 "width":0,
+                 "x":3502,
+                 "y":342.5
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -114,8 +137,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":6,
- "nextobjectid":7,
+ "nextlayerid":7,
+ "nextobjectid":9,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.4.1",
