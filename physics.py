@@ -142,7 +142,7 @@ class Physics(object):
 
           # pdb.set_trace()
           
-          if gameObject.collide(rect):
+          if gameObject.moveable and gameObject.collide(rect):
             if isinstance(gameObject, attack.DamageObj) and gameObject.die_on_impact:
               gameObject.die()
             # pdb.set_trace()

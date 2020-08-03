@@ -54,7 +54,9 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
             duration = self.duration,
             objectType = self.name,
             power = self.power,
-            mass = self.mass)
+            mass = self.mass,
+            die_on_impact = False,
+            )
 
         # DEBUG
         made.setSpriteStatus(visible=True)
@@ -67,6 +69,7 @@ playerWeapon1FCT = SoldierWeapon1FCT(
                     power=34.0,
                     ox = 1.0,
                     h = 1.5,
+                    w = 1.5,
                     )
 
 weapons_list.append( soldierWeapon1FCT )

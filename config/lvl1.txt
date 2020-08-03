@@ -16,8 +16,12 @@ clear
 [source]
 type=gameObjects
 clear
-[GAME_ROOT]\art\gameObjects.png
+[GAME_ROOT]\art\player1.png
 Player
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\soldier1.png
 Soldier
 
 [source]
@@ -56,6 +60,16 @@ type=gameObjects
 Potion
 
 [source]
+type=gameObjects
+[GAME_ROOT]\art\ghost1.png
+Ghost1
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\blood1.png
+Blood1
+
+[source]
 type=childGameObjects
 MiniSoldier Soldier
 MegaSoldier Soldier
@@ -67,6 +81,8 @@ Arrow5 Arrow1
 SpreadShot Arrow1
 SpreadShotBoss1Phase3 Arrow1
 BallOnChain2 BallOnChain1
+BigBlood1 Blood1
+BigGhost1 Ghost1
 [end]
 
 [source]

@@ -18,7 +18,7 @@ class ObjectArt(object): #procedure: get sprite index from gameObject.animation.
     
   def getSprite(self, spriteIndx):
     # modulate spriteIndx with length of art
-    idx = spriteIndx % len(self.data)
+    idx = np.min([spriteIndx, len(self.data)-1])
     return self.data[idx]
 
 
@@ -108,8 +108,40 @@ class World(object):
         tile = image.subsurface(rect)
         tile = pygame.transform.scale(tile,(pixelsPerTileWidth,pixelsPerTileHeight))
         self.tileArt.addTile(tile)
-        
-  def loadGameObjects(self, imagefile, f, factories, clear=False): #height/width of tiles
+
+  def loadGameObjects(self, imagefile, f, factories, clear=False):
+    # reads in image, resets, fills with sprites
+    # input: 'f' is the file object which specifies names of game objects
+    # moves left to right, then top to bottom along the image
+    # NOTE: Assumes 1 sprite per image file
+
+    if clear:
+      self.objectArts.clear()
+    image = pygame.image.load(imagefile).convert_alpha()
+    imgw, imgh = image.get_size() # in pixels
+    
+    objectType = f.parse_lines()
+    self.objectArts[objectType] = ObjectArt()
+    pixelWidth  = factories[objectType].values['pixelWidth']
+    pixelHeight = factories[objectType].values['pixelHeight']
+    tileWidth   = factories[objectType].values['artWidth']
+    tileHeight  = factories[objectType].values['artHeight']
+
+    nb_w = int( imgw / pixelWidth )
+    nb_h = int( imgh / pixelHeight )
+
+    spriteRow=[]
+    for tiley in range(nb_h):
+      for tilex in range(nb_w): # ensure we'll go left-right, then top-bottom
+        rect = (tilex * pixelWidth, tiley * pixelHeight, pixelWidth, pixelHeight)
+        tile = image.subsurface(rect)
+        tile = pygame.transform.scale(tile, (int(tileWidth * pixelsPerTileWidth), 
+                int(tileHeight * pixelsPerTileHeight)))
+        spriteRow.append(tile)
+
+    self.objectArts[objectType].setData(spriteRow)
+    
+  def loadGameObjects2(self, imagefile, f, factories, clear=False): #height/width of tiles
     # reads in image, resets, fills with sprites
     # input: 'f' is the file object which specifies names of game objects
     if clear:
@@ -350,15 +382,15 @@ class World(object):
     pixeli = 0
     pixelj = 0
 
-    for i in range(minIDX_x, maxIDX_x):
-      for j in range(minIDX_y, maxIDX_y):
+    for i in range(minIDX_x, maxIDX_x+1):
+      for j in range(minIDX_y, maxIDX_y+1):
         if not (mapARR[i][j] == -1 or mapARR[i][j] == 19):
           offset = -1.0 * (self.screenLocation % 1) * pixel_factor
           location = (pixeli, pixelj) + offset
 
           art = self.getTileArt(mapType, (i, j))
           World.screen.blit(art, location)
-        
+          
         pixelj += pixelsPerTileHeight
       pixeli += pixelsPerTileWidth
       pixelj = 0
@@ -415,7 +447,8 @@ class World(object):
           #(self.screenLocationX, self.screenLocationY))
 
         objectType = go.objectType
-        spriteIndex = go.animation.getSpriteIndex()
+        # spriteIndex = go.animation.getSpriteIndex()
+        spriteIndex = go.animation.animationIndex
         sprite = self.objectArts[objectType].getSprite(spriteIndex)
         World.screen.blit(sprite, (xscreen, yscreen))
 

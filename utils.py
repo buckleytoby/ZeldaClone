@@ -230,6 +230,9 @@ def get_trigger_area(name):
 def get_game_time():
     return DATA["game_time"]
 
+def get_factories():
+    return DATA["factories_ref"]
+
 def get_game_objects():
     return DATA["game_objects_ref"]
 

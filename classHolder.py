@@ -69,6 +69,10 @@ class ClassHolder(object):
                  "BallOnChainGuy": BallOnChainGuyFactory(),
                  "Boss1": Boss1(),
                  'Potion': potionFactory,
+                 'Ghost1': GhostParticleFactory(),
+                 'BigGhost1': BigGhostParticleFactory(),
+                 'Blood1': BloodParticleFactory(),
+                 'BigBlood1': BigBloodParticleFactory(),
                   }
     
     # add weapons to the list of factories
@@ -193,6 +197,10 @@ class ClassHolder(object):
     width = world_map.shape[0]
     height = world_map.shape[1]
     self.gameObjectsARR = [[[] for y in range(height)] for x in range(width)]
+
+    # TODO: find a better place to put this
+    map_limit = np.array([width, height])
+    self.playerClass.screenClass.map_limit = map_limit
 
   def instantiate_game_objects(self):
     self.reset_game_objects_arr()

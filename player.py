@@ -14,9 +14,11 @@ class Screen(object):
     self.screenLocationY = 0.0
     self.offsetX = -1.0 * screenTileWidth / 2.0
     self.offsetY = -1.0 * screenTileHeight / 2.0
+    self.map_limit = np.array([9999.0, 9999.0]) # default
   
   def update(self, x, y):
     screenLocation = np.array([x + self.offsetX, y + self.offsetY])
+    screenLocation = np.clip(screenLocation, [0.0, 0.0], self.map_limit)
 
     self.screenLocationX, self.screenLocationY = screenLocation.tolist()
 

@@ -86,7 +86,7 @@ class Attacker(object):
         self.mana_regen = 0.0
         self.disabled = False # whether can attack
         self.invincible = False # whether can get hit
-        self.invincible_cooldown = 1.0
+        self.invincible_cooldown = 0.5
 
     def set_health(self, health):
         self.health = health
@@ -130,6 +130,15 @@ class Attacker(object):
                 # die, if applicable
                 if self.health < 0.0:
                     die(go)
+
+                    # make go invisible so it's not drawn on the next frame
+                    go.visible = False
+
+                    if hasattr(go, "death_objects"):
+                        factories = get_factories()
+                        for name in go.death_objects:
+                            obj = factories[name].create(go.x, go.y)
+                            make_gen_msg(obj)
 
                 # trigger invincibility frames
                 self.invincible_cooldowner()

@@ -16,28 +16,35 @@ class Animation(object):
     self.index2sprite = np.array(4*[[0,0,1,1,2,2,1,1,0,0,3,3,4,4,3,3]])
     self.index2sprite[0] += 10
     self.index2sprite[2] += 5
+    self.time_elapsed = 0.0
+    self.update_rate = 0.1
 
-  def updateSprite(self, dx, dy):
-    #animation
-    if dx > 0:
-      if self.face != Animation.right: #face: 0-left, 1-down, 2-right, 3-up
-        self.face = Animation.right
-      self.animationIndex += 1
-    elif dx < 0:
-      if self.face!=Animation.left:
-        self.face=Animation.left
-      self.animationIndex += 1
-    elif dy > 0:
-      if self.face != Animation.down:
-        self.face = Animation.down
-      self.animationIndex += 1
-    elif dy < 0:
-      if self.face != Animation.up:
-        self.face = Animation.up
-      self.animationIndex += 1
-    elif dx == 0 and dy == 0:
-      self.animationIndex = 0
-    self.animationIndex %= self.index2sprite.shape[1]
+  def updateSprite(self, seconds, dx, dy):
+    # check if elapsed time surpasses update rate
+    self.time_elapsed += seconds
+    if self.time_elapsed > self.update_rate:
+      self.time_elapsed -= self.update_rate
+      # increment animation index for each update frame
+      if dx > 0:
+        if self.face != Animation.right: #face: 0-left, 1-down, 2-right, 3-up
+          self.face = Animation.right
+        self.animationIndex += 1
+      elif dx < 0:
+        if self.face!=Animation.left:
+          self.face=Animation.left
+        self.animationIndex += 1
+      elif dy > 0:
+        if self.face != Animation.down:
+          self.face = Animation.down
+        self.animationIndex += 1
+      elif dy < 0:
+        if self.face != Animation.up:
+          self.face = Animation.up
+        self.animationIndex += 1
+      elif dx == 0 and dy == 0:
+        # self.animationIndex = 0
+        self.animationIndex += 1
+      self.animationIndex %= self.index2sprite.shape[1]
     
   def getSpriteIndex(self):
     return self.index2sprite[self.face][self.animationIndex]
@@ -48,6 +55,7 @@ class StaticGameObject(object):
     GameObject.id += 1
     self.id = GameObject.id
     self.type = "static_object"
+    self.objectType = "" # for art purposes
     #-------------- default values --------------
     # hitbox
     self.drawHitBox = False
@@ -228,7 +236,7 @@ class GameObject(StaticGameObject):
       self.update_heading(self.dy_actual, self.dx_actual)
 
     if self.has_sprite:
-      self.animation.updateSprite(self.dx_actual, self.dy_actual)
+      self.animation.updateSprite(seconds, self.dx_actual, self.dy_actual)
 
   @property
   def projectile_heading(self):
