@@ -14,6 +14,7 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
     """
     def __init__(self, **kwargs):
         self.name = "SoldierWeapon1"
+        self.art_name = self.name
         self.w = 0.85 # width of hitbox
         self.h = 0.85 # height of hitbox
         self.ox = 0.75 # offset of hitbox (to center)
@@ -24,7 +25,18 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
         self.cooldown = 0.6
         self.is_continuous = False
 
+
+
         super().__init__()
+        
+        # set values
+        self.values['can_transfer_momentum'] = False
+        self.values['artWidth']      = self.w
+        self.values['artHeight']     = self.h
+        self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change
+        self.values['pixelHeight'] = 24 # size of the sprite image, depends on image size, shouldn't change
+        
+
         self.__dict__.update(kwargs)
 
     def make_rect(self, go):
@@ -52,14 +64,14 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
             parent_id = go.id,
             team_id = go.team_id,
             duration = self.duration,
-            objectType = self.name,
+            objectType = self.art_name,
             power = self.power,
             mass = self.mass,
             die_on_impact = False,
             )
 
         # DEBUG
-        made.setSpriteStatus(visible=True)
+        made.setSpriteStatus(visible=True, has_sprite=False)
         # pdb.set_trace()
         return made
 
@@ -80,7 +92,7 @@ class StraightLine(AI.Basic):
     #     super().__init__(*args)
 
 
-    def get_action(self):
+    def get_action(self, elapsed_time):
         """ get direction from heading and project velocity in that direction
         """
         direction = self.parent.get_heading_unit_direction()
@@ -126,7 +138,7 @@ class Arrow1FCT(SoldierWeapon1FCT):
         self.values['artHeight']     = self.h
         self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change
         self.values['pixelHeight'] = 16 # size of the sprite image, depends on image size, shouldn't change
-
+        
         # reset creator
         self.creator = StraightProjectile
 
@@ -252,7 +264,7 @@ weapons_list.append(spreadShotBoss1Phase3)
 class BallOnChain(AI.Basic):
     # circular motion around caster
 
-    def get_action(self):
+    def get_action(self, elapsed_time):
         """ get direction from heading and project velocity in that direction
         """
         pivot_pt = self.parent.go_position() # recall, the parent for the AI is the DamageObj

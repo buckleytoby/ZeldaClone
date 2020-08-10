@@ -59,8 +59,7 @@ class ParticleObjFactory(Factory):
     def __init__(self):
         super().__init__(particles.ParticleObj) #check syntax
     
-    def create(self, x, y):
-        kwargs = {}
+    def create(self, x, y, **kwargs):
         kwargs["x"] = x
         kwargs['y'] = y
         kwargs['old_x'] = x
@@ -82,13 +81,16 @@ class GhostParticleFactory(ParticleObjFactory):
     self.values['artHeight']     = 1.0
     self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change
     self.values['pixelHeight'] = 16 # size of the sprite image, depends on image size, shouldn't change
-
+    self.values['collideable'] = False
     
   def create(self, x, y):
     object = super().create(x, y)
     # setup
     object.setSpriteStatus(visible=True, has_sprite=True)
     object.animation.update_rate = self.values['update_rate']
+
+    # start the thread
+    object.start()
     return object
 
 class BloodParticleFactory(GhostParticleFactory):

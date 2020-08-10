@@ -17,7 +17,7 @@ class Basic(object):
     return out
   position = property(get_position)
   
-  def get_action(self):
+  def get_action(self, elapsed_time):
     """ non-action base function """
     dv = np.zeros(2)
     out = {'dv': dv}
@@ -51,7 +51,7 @@ class Follower(Basic):
 
     return dv, dist
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     dv, dist = self.get_dv()
     out = {'dv': dv}
     cbs = []
@@ -68,7 +68,7 @@ class Basic_Attacker(Follower):
   def reset_wait(self):
     self.wait = False
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     cbs = []
     dv, dist = self.get_dv()
 
@@ -124,7 +124,7 @@ class Avoider(Basic):
       dv = self.parent.max_velocity * unit_direction
     return dv
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     dv = self.get_dv()
     out = {'dv': dv}
     cbs = []
@@ -196,7 +196,7 @@ class Boss1Phase1(Basic):
       dv = np.array([-1, 0]) * self.parent.max_velocity
     return dv
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     cbs = []
     dv = self.get_dv()
 
@@ -269,7 +269,7 @@ class Boss1Meta(Basic):
       self.parent.inventory.use_item("Boss1Weapon2")
 
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     self.update()
     return self.active_ai.get_action()
     

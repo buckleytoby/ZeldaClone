@@ -25,7 +25,6 @@ class ParticleObj(gameObjects.GameObject):
         kwargs["moveable"] = False
         super().__init__(**kwargs)
         #
-        self.start()
     
     def start(self):
         self._started = True
@@ -48,7 +47,8 @@ class ParticleObj(gameObjects.GameObject):
         tt = t0
         while not self._done:
             dt = get_game_time() - tt
-            self.update(dt) # in parent game obj
+            # BUG: is update getting called for this obj in physics too? idk...
+            # self.update(dt) # in parent game obj
 
             # sleep
             time.sleep(self.update_rate)

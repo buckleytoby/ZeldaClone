@@ -112,10 +112,30 @@ class PatchExt(m2d.geometry.Patch):
         out = self.xlims[-1]
         return out
 
-    bottom = property(get_bottom)
-    top    = property(get_top)
-    left   = property(get_left)
-    right  = property(get_right)
+    def set_bottom(self, y):
+        """ bottom is w.r.t. screen (user)
+        """
+        self.ylims[-1] = y
+    
+    def set_top(self, y):
+        """ top is w.r.t. screen (user)
+        """
+        self.ylims[0] = y
+
+    def set_left(self, x):
+        """ left is w.r.t. screen (user)
+        """
+        self.xlims[0] = x
+
+    def set_right(self, x):
+        """ right is w.r.t. screen (user)
+        """
+        self.xlims[-1] = x
+
+    bottom = property(get_bottom, set_bottom)
+    top    = property(get_top, set_top)
+    left   = property(get_left, set_left)
+    right  = property(get_right, set_right)
     x      = left
     y      = top
 
@@ -127,8 +147,14 @@ class PatchExt(m2d.geometry.Patch):
         out = self.bottom - self.top
         return out
 
-    width  = property(get_width)
-    height = property(get_height)
+    def set_width(self, w):
+        self.right = self.left + w
+
+    def set_height(self, h):
+        self.bottom = self.top + h
+
+    width  = property(get_width, set_width)
+    height = property(get_height, set_height)
 
     def convert_to_pygame_rect(self):
         # REMEMBER: pygame Rect's truncate to the nearest integer
@@ -374,3 +400,41 @@ class QuadTree(object):
             hits |= self.se.hit(rect)
 
         return hits
+
+class Timer(threading.Timer):
+    # threading Timer object but with a clock so you can query the passed time
+    def __init__(self, *args):
+        self.start_time = 0.0
+        super().__init__(*args)
+
+    def start(self):
+        self.start_time = pygame.time.get_ticks() / 1000.0
+        super().start()
+
+    def get_elapsed_time(self):
+        dt = pygame.time.get_ticks() / 1000.0 - self.start_time
+        return dt
+
+class Cooldown():
+    # class used to define a cooldown timer
+    def __init__(self, cooldown, use_fcn):
+        self.cooldown = cooldown
+        self.use_fcn = use_fcn
+
+        self.cooling_down = False
+
+    def start(self, **kwargs):
+        if not self.cooling_down:
+            success = self.use_fcn(**kwargs) # returns the made object if succesful, otherwise None
+            if success:
+                self.cooldowner()
+
+    def cooldowner(self):
+        """ spool up a thread """
+        self.cooling_down = True
+        # BUG: this is real time and not pygame time
+        self.timer = Timer(self.cooldown, self.reset)
+        self.timer.start()
+        
+    def reset(self):
+        self.cooling_down = False

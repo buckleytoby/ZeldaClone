@@ -10,6 +10,10 @@ import scipy.spatial as scSpatial
 from collections import defaultdict
 from threading import Thread
 import threading
+import pytiled_parser
+
+# debugging
+SOUND_ON = False
 
 #globals
 GAME_ROOT = r"C:\Users\Toby\Documents\github\offworld\ZeldaClone"

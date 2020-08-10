@@ -4,6 +4,7 @@ import AI
 from utils        import *
 import weapons
 import math_utils
+import particle_factories
 
 global Done
 
@@ -52,6 +53,8 @@ class Keyboard(object):
                         pygame.K_e:      'edit',
                         pygame.K_RCTRL: 'attack',
                         pygame.K_1:     'use_item1',
+                        pygame.K_2:     'use_item2',
+                        pygame.K_3:     'use_ability1',
                         1:   'attack',
                         2:   'use_item1',
                         3:   'switch_weapon',
@@ -161,6 +164,11 @@ class Player(AI.Basic):
         #turn on edit mode
         print('edit mode')
       if action == "use_item1": self.gameObject.inventory.use_item("Potion")
+      if action == "use_item2": 
+        self.gameObject.inventory.use_item("GoldKey")
+      if action == "use_ability1":
+        target = self.screenClass.getLocation() + get_mouse_pos("tiles")
+        particle_factories.explosionFactory.create(target[0], target[1])
       if action is 'attack': self.cbs_to_call.append(action)
         
     # real-time events -- meaning, keys that are continuously held down
@@ -203,7 +211,7 @@ class Player(AI.Basic):
     
     return actions
   
-  def get_action(self):
+  def get_action(self, elapsed_time):
     out = {'dv': np.array([self.dx, self.dy])}
     cbs = self.cbs_to_call
     # clear cbs

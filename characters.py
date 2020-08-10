@@ -29,6 +29,7 @@ class SoldierFactory(factory.GameObjectFactory):
     self.values['team_id'] = 1
     self.values['hitSoundFX'] = 'grunt1'
     self.values['deathSoundFX'] = 'death1'
+    self.values['damage_objects'] = ['Explosion']
     self.values['death_objects'] = ['Blood1', 'Ghost1']
     self.values['weapon'] = weapons.soldierWeapon1FCT
     self.ai_class = defaultAI
@@ -149,6 +150,7 @@ class ArcherFactory(factory.GameObjectFactory):
     self.values['weapon'] = weapons.arrow5FCT
     self.values['hitSoundFX'] = 'grunt1'
     self.values['deathSoundFX'] = 'death1'
+    self.values['damage_objects'] = ['Explosion']
     self.values['death_objects'] = ['Blood1', 'Ghost1']
     self.ai_class = defaultAI
   

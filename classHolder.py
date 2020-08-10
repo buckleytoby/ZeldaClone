@@ -8,6 +8,7 @@ from physics      import *
 from factory      import *
 from characters   import *
 from item_objects import *
+import particle_factories
 
 class TriggerAreas():
   def __init__(self, name, dict):
@@ -48,6 +49,7 @@ class ClassHolder(object):
     # game objects dict
     self.gameObjects = {}
     self.gameObjectsARR = []
+    self.maps = {}
 
     # trigger areas
     self.trigger_areas = {}
@@ -69,10 +71,13 @@ class ClassHolder(object):
                  "BallOnChainGuy": BallOnChainGuyFactory(),
                  "Boss1": Boss1(),
                  'Potion': potionFactory,
+                 'GoldKey': goldKeyFactory,
+                 'Gate': gateFactory,
                  'Ghost1': GhostParticleFactory(),
                  'BigGhost1': BigGhostParticleFactory(),
                  'Blood1': BloodParticleFactory(),
                  'BigBlood1': BigBloodParticleFactory(),
+                 'Explosion': particle_factories.explosionFactory,
                   }
     
     # add weapons to the list of factories
@@ -94,7 +99,10 @@ class ClassHolder(object):
     """
     valid_cmds = ["GEN_OBJ", "DEL_OBJ", "PLAY_SOUND", "CHANGE_MUSIC"]
 
-    while not MESSAGES.empty():
+    max_nb_messages = 10
+    count = 0
+    while not MESSAGES.empty() and count < max_nb_messages:
+      count += 1
       msg = MESSAGES.get()
       cmd = msg[0]
       # print(msg, cmd)
@@ -106,17 +114,19 @@ class ClassHolder(object):
     obj = self.worldClass.music[song_name]
     pygame.mixer.music.load(obj)
     pygame.mixer.music.set_volume(0.5)
-    pygame.mixer.music.play(-1)
+    if SOUND_ON:
+      pygame.mixer.music.play(-1)
 
   def PLAY_SOUND(self, name):
-    self.worldClass.sounds[name].play()
+    if SOUND_ON:
+      self.worldClass.sounds[name].play()
 
   def GEN_OBJ(self, obj):
     x = obj.x
     y = obj.y
 
-    if False:
-      print("adding game object: {} at x: {} y: {}".format(type(obj), x, y))
+    # if True:
+    #   print("adding game object: {} at x: {} y: {}".format(type(obj), x, y))
     self.add_game_object(x, y, obj)
 
   def DEL_OBJ(self, obj):
@@ -138,8 +148,22 @@ class ClassHolder(object):
   #       mapMatrix[i][j]=int(dlist[i])-1 #Tiled is 1 indexed
   #   self.worldClass.setMap(mapType, mapMatrix)
 
+  def load_tmx_map(self, tmx_fn):
+    map1 = pytiled_parser.parse_tile_map(tmx_fn)
+    self.maps[map1.tmx_file] = map1
+
+    for gamegid in map1.tile_sets:
+      # dict key is the gamegid 
+      tileset = map1.tile_sets[gamegid]
+
+      # load source
+      self.worldClass.tileArt.add_name(tileset.name, gamegid - 1) # subtract 1 since tiled is 1-indexed
+
+
   def set_map_json(self, json_fn):
     # load json file and extract the objects
+
+    # firstgid: index value that that tileset starts at
 
     with open(json_fn) as json_file:
       data = json.load(json_file)
@@ -181,8 +205,14 @@ class ClassHolder(object):
               x, y = np.divide( np.array([object[key] for key in ['x', 'y']]), TILE_SIZE)
               type = object['type']
               if type in self.factories:
-                object = self.factories[type].create(x, y)
-                self.add_game_object( x, y, object )
+                obj = self.factories[type].create(x, y)
+
+                # add on custom fields
+                if "properties" in object: #hasattr(object, "properties"):
+                  for prop in object['properties']:
+                    setattr(obj, prop["name"], prop["value"])
+
+                self.add_game_object( x, y, obj )
               else:
                 print("Unable to spawn object: {}".format(type))
 
@@ -199,7 +229,7 @@ class ClassHolder(object):
     self.gameObjectsARR = [[[] for y in range(height)] for x in range(width)]
 
     # TODO: find a better place to put this
-    map_limit = np.array([width, height])
+    map_limit = np.array([width - 1, height - 1])
     self.playerClass.screenClass.map_limit = map_limit
 
   def instantiate_game_objects(self):
@@ -276,6 +306,10 @@ class ClassHolder(object):
       elif line == "[json_map]":
         json_fn = process_file_name( f.parse_lines() )
         self.set_map_json(json_fn)
+
+      elif line == "[tmx_map]":
+        tmx_fn = process_file_name( f.parse_lines() )
+        self.load_tmx_map(tmx_fn)
       
         
       elif line == '[INCL]':
@@ -327,8 +361,10 @@ class ClassHolder(object):
             line = f.parse_lines()
           else:
             clear = False
-          file_name = process_file_name(line)
-          self.worldClass.load_tiles(file_name, 16, 16, clear=clear)
+          img_fn = process_file_name(line)
+          name = f.parse_lines()
+          gamegid = self.worldClass.tileArt.gamegids[name]
+          self.worldClass.load_tiles(img_fn, gamegid, 16, 16, clear=clear)
           count = 0
           while line != '[end]':
             line = f.parse_lines()
@@ -338,7 +374,7 @@ class ClassHolder(object):
                 collide = bool(int(str1))
               except:
                 continue
-              self.worldClass.tileArt.tiles[count].can_collide = collide
+              self.worldClass.tileArt.tiles[gamegid + count].can_collide = collide
               count += 1
               
       #restart loop, get next line

@@ -43,21 +43,22 @@ class MasterClass(object):
     
     # load config
     lvl1.loadConfigFile()
+    # bake the map
+    lvl1.worldClass.bake_tiles()
 
     # play background music
-    pygame.mixer.music.load(lvl1.worldClass.music["song1"])
-    pygame.mixer.music.set_volume(0.5)
-    pygame.mixer.music.play(-1)
+    if SOUND_ON:
+      lvl1.CHANGE_MUSIC("song1")
     
     # main game
     config = os.path.join(prefix, "config", "main.txt")
-    self.main = ClassHolder(config)
+    # self.main = ClassHolder(config)
     # load config
-    self.main.loadConfigFile()
+    # self.main.loadConfigFile()
     
     # group all holders
     self.holders = [lvl1,
-                    self.main]
+                    "n/a"]
                     
     # set initial holder
     self.set_holder(self.holders[0])
@@ -126,7 +127,7 @@ class MasterClass(object):
         # pick up items
         elif go.type == "item":
           # make item
-          item = go.item_maker(self.holder.playerClass.gameObject)
+          item = go.item_maker(go, self.holder.playerClass.gameObject)
 
           # add item
           self.holder.playerClass.gameObject.inventory.add_item(item)

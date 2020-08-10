@@ -40,10 +40,13 @@ class Physics(object):
     go_list = list(gameObjects.values())
 
     # calc all pygame rects
-    [go.calc_pygame_rect() for go in go_list]
+    [go.update_pygame_rect() for go in go_list]
 
     # use a quadtree
     self.go_tree = utils.QuadTree(go_list, depth=6)
+
+    # update DATA
+    DATA["game_object_tree"] = self.go_tree
 
     # get rect for the active screen, expanded by a bit
     screen = self.playerClass.screenClass.get_footprint_rect().scale(0.15).convert_to_pygame_rect()
@@ -99,7 +102,7 @@ class Physics(object):
 
 
       #gameObject.update(timeElapsed)
-      action, cbs = gameObject.AI.get_action()
+      action, cbs = gameObject.AI.get_action(timeElapsed)
       vel_dict[gameObject.id] = np.zeros(2) #action['dv']
       dx, dy = action['dv']
 
@@ -133,8 +136,9 @@ class Physics(object):
 
       # must be last: check collision against static objects
       indices = gameObject.get_overlap_tiles()
-      for i, j in indices:
-        if worldClass.can_tile_collide(mapType, [i, j]):
+      for ij in indices:
+        if worldClass.can_tile_collide(mapType, ij):
+          i, j = ij
           rect = worldClass.maps[mapType].get_rect(i, j)
           
           dx = gameObject.dx
@@ -209,7 +213,7 @@ class Physics(object):
       if go1.id == go2.id:
         continue
 
-      if go1.collide(go2):
+      if go1.collideable and go2.collideable and go1.collide(go2):
         dv1 = 0.0
         dv2 = 0.0
 
@@ -221,8 +225,9 @@ class Physics(object):
           dv1 += self.damage(do=go2, go=go1)
 
         # resolve if game-objects are moveable
-        if go1.moveable and go2.moveable:
+        if go1.moveable and go2.can_transfer_momentum:
           dv1 += self.momentum_trade(go2, go1)
+        if go2.moveable and go1.can_transfer_momentum:
           dv2 += self.momentum_trade(go1, go2)
 
         # add to vel arr

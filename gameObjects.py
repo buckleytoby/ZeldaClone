@@ -68,6 +68,8 @@ class StaticGameObject(object):
     self.width = 0.0
     self.height = 0.0
     self.heading = 0.0 # from 0 to 2pi
+    self.patch_rect = self.make_patch_rect()
+    self.pygame_rect = self.patch_rect.convert_to_pygame_rect()
     # visuals
     self.visible = False
     self.has_sprite = False #False --> rect
@@ -164,14 +166,30 @@ class StaticGameObject(object):
     return make_rect(lt, wh)
 
   reach_rect = property(get_reach_rect)
+
+  def make_patch_rect(self):
+    lt = [self.x, self.y]
+    wh = [self.width, self.height]
+    return make_rect(lt, wh)
   
   def get_rect(self):
     """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
     """
-    lt = [self.x, self.y]
-    wh = [self.width, self.height]
     #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
-    return make_rect(lt, wh)
+    self.patch_rect.x = self.x
+    self.patch_rect.y = self.y
+    self.patch_rect.width = self.width
+    self.patch_rect.height = self.height
+    return self.patch_rect
+  
+  def update_pygame_rect(self):
+    """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
+    """
+    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
+    self.pygame_rect.x = self.x
+    self.pygame_rect.y = self.y
+    self.pygame_rect.width = self.width
+    self.pygame_rect.height = self.height
 
   def get_rect_art(self):
     """ get pygame Rect of the object's art. i.e. the portion that can be collided with.
@@ -195,7 +213,9 @@ class GameObject(StaticGameObject):
     super().__init__(**kwargs)
     self.type = "game_object"
     # physics
-    self.moveable = True
+    self.moveable = True # if the object can be moved
+    self.collideable = True # if the object can be collided with
+    self.can_transfer_momentum = True # if the object can transfer momentum to objects it interacts with
     self.mass = 70.0
     self.friction = 0.01
     self.reach = 2.0 # tile reach for interactions
@@ -259,12 +279,24 @@ class GameObject(StaticGameObject):
     xmax = int(np.ceil(rect.right) + 1)
     ymin = int(np.floor(rect.top))
     ymax = int(np.ceil(rect.bottom) + 1)
-    try:
-      X, Y = np.mgrid[xmin:xmax:1, ymin:ymax:1]
-    except:
-      pdb.set_trace()
-    indices = np.vstack([X.ravel(), Y.ravel()]).T
-    return indices
+    # try:
+    #   X, Y = np.mgrid[xmin:xmax:1, ymin:ymax:1]
+    # except:
+    #   pdb.set_trace()
+    # indices = np.vstack([X.ravel(), Y.ravel()]).T
+
+    length = (xmax - xmin) * (ymax - ymin)
+    indices2 = np.zeros([length, 2], dtype=int)
+    # using loops
+    for Y in range(ymin, ymax):
+      for X in range(xmin, xmax):
+        x = X - xmin
+        y = Y - ymin
+        idx = (xmax - xmin) * (y) + x
+        indices2[idx][0] = X
+        indices2[idx][1] = Y
+
+    return indices2
 
   def get_rect_total_movement(self):
     """ get pygame Rect of the object between last position and this position
@@ -295,7 +327,15 @@ class GameObject(StaticGameObject):
     else:
       if isinstance(other, PatchExt): out = self.rect.collide(other)
       else: out = self.rect.collide(other.rect)
+
+    # call callback
+    if out: self.collide_callback(other)
+
     return out
+
+  def collide_callback(self, other, *args):
+    # function which gets called when the other object collides with this one
+    pass
   
   def get_velocity(self):
     out = np.array([self.dx_actual, self.dy_actual])

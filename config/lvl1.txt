@@ -1,15 +1,30 @@
+[tmx_map]
+[GAME_ROOT]\maps\lvl1.tmx
+
 [source]
 type=tiles
 clear
 [GAME_ROOT]\art\tiles.png
+tiles
 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 
+[end]
+
+[source]
+type=tiles
+[GAME_ROOT]\art\tiles2.png
+tiles2
+[end]
+
+[source]
+type=tiles
+[GAME_ROOT]\art\house1.png
+house1
 [end]
 
 # loading the map
 [json_map]
 [GAME_ROOT]\maps\lvl1.json
-
 
 
 
@@ -68,6 +83,21 @@ Ghost1
 type=gameObjects
 [GAME_ROOT]\art\blood1.png
 Blood1
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\gold_key1.png
+GoldKey
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\gate1.png
+Gate
+
+[source]
+type=gameObjects
+[GAME_ROOT]\art\weap3.png
+SoldierWeapon1
 
 [source]
 type=childGameObjects
