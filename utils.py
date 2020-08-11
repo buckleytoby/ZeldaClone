@@ -52,21 +52,24 @@ def make_rect(xy, wh):
 
 class PatchExt(m2d.geometry.Patch):
     
-    def __init__(self, xxyy_limits):
+    def __init__(self, obj):
         """Specified by 'xxyy_limits' a sequence of two pairs: [[x_low,
         x_high], [y_low, y_high]]."""
-        arr = np.array(xxyy_limits)
+        if isinstance(obj, PatchExt):
+            arr = obj.get_xxyy_limits_copy()
+        else:
+            arr = obj[:]
         if len(arr) == 2:
             self.xlims, self.ylims = arr
         elif len(arr) == 4:
             self.xlims, self.ylims = arr[0:2], arr[2:4]
 
         # check for correct order
-        if not (self.xlims[1] > self.xlims[0]):
-            pass
-            # pdb.set_trace()
-        if not (self.ylims[1] > self.ylims[0]):
-            pass
+        # if not (self.xlims[1] > self.xlims[0]):
+        #     pass
+        #     # pdb.set_trace()
+        # if not (self.ylims[1] > self.ylims[0]):
+        #     pass
             # pdb.set_trace()
 
     def collide(self, other):
@@ -138,6 +141,17 @@ class PatchExt(m2d.geometry.Patch):
     right  = property(get_right, set_right)
     x      = left
     y      = top
+    X      = right
+    Y      = bottom
+
+    def get_centerx(self):
+        return 0.5 * (self.x + self.X)
+
+    def get_centery(self):
+        return 0.5 * (self.y + self.Y)
+
+    centerx = property(get_centerx)
+    centery = property(get_centery)
 
     def get_width(self):
         out = self.right - self.left
@@ -168,10 +182,9 @@ class PatchExt(m2d.geometry.Patch):
         size = np.array([self.width, self.height])
 
         pos_screen = np.array(screenLocation, dtype='float')
-        factor = np.array((pixelsPerTileWidth, pixelsPerTileHeight))
 
-        new_size = np.multiply(size, factor) #check syntax
-        new_pos = np.multiply(pos - pos_screen, factor)
+        new_size = np.multiply(size, pixel_factor) #check syntax
+        new_pos = np.multiply(pos - pos_screen, pixel_factor)
         xxyy_limits = corner_to_limits(new_pos, new_size)
         out = PatchExt(xxyy_limits)
         return out
@@ -192,6 +205,7 @@ class PatchExt(m2d.geometry.Patch):
 
     # required functions for pygame Rect & quadtree compliance
     def collidelist(self, list):
+        # collidelist(list) -> index
         idx = -1
         for counter, rect in enumerate(list):
             if self.collide(rect):
@@ -200,18 +214,62 @@ class PatchExt(m2d.geometry.Patch):
         return idx
 
     def collidelistall(self, list):
-        # output: indices
-        pass
+        # test if all rectangles in a list intersect
+        # collidelistall(list) -> indices
+
+        # Returns a list of all the indices that contain rectangles that collide with the Rect.
+        #  If no intersecting rectangles are found, an empty list is returned.
+        indices = []
+        for counter, rect in enumerate(list):
+            if self.collide(rect):
+                indices.append(counter)
+        return indices
 
     def union(self, rect):
         # output: Rect
+        x = min(self.x, rect.x)
+        y = min(self.y, rect.y)
+        X = max(self.x, rect.x)
+        Y = max(self.y, rect.y)
         pass
 
     def union_ip(self, rect):
         # output: None
-        pass
+        if self.xlims[0] < rect.xlims[0]:
+            x = self.xlims[0]
+        else:
+            x = rect.xlims[0]
 
+        if self.xlims[1] > rect.xlims[1]:
+            X = self.xlims[1]
+        else:
+            X = rect.xlims[1]
 
+        if self.ylims[0] < rect.ylims[0]:
+            y = self.ylims[0]
+        else:
+            y = rect.ylims[0]
+
+        if self.ylims[1] > rect.ylims[1]:
+            Y = self.ylims[1]
+        else:
+            Y = rect.ylims[1]
+
+        self.xlims[0] = x
+        self.ylims[0] = y
+        self.xlims[1] = X
+        self.ylims[1] = Y
+
+    def get_xxyy_limits(self):
+        return (self.xlims, self.ylims)
+
+    xxyy_limits = property(get_xxyy_limits)
+
+    def get_xxyy_limits_copy(self):
+        return (np.array(self.xlims), np.array(self.ylims))
+
+    def copy(self):
+        return PatchExt(self.xxyy_limits)
 
 def process_file_name(s1):
     """ Process file name for os independence, as well as replace [GAME_ROOT] with the variable
@@ -309,7 +367,7 @@ class QuadTree(object):
  
         @param items:
             A sequence of items to store in the quad-tree. Note that these
-            items must be a pygame.Rect or have a .rect attribute.
+            items must have a .patch_rect attribute.
             
         @param depth:
             The maximum recursion depth.
@@ -324,21 +382,22 @@ class QuadTree(object):
         
         # If we've reached the maximum depth then insert all items into this
         # quadrant.
-        depth -= 1
-        if depth == 0 or not items:
+        self.depth = depth - 1
+        if self.depth == 0 or not items:
             self.items = items
             return
  
         # Find this quadrant's centre.
         if bounding_rect:
-            bounding_rect = pygame.Rect( bounding_rect )
+            bounding_rect = PatchExt( bounding_rect )
         else:
             # If there isn't a bounding rect, then calculate it from the items.
-            bounding_rect = pygame.Rect( items[0].pygame_rect )
+            bounding_rect = PatchExt( items[0].patch_rect )
             for item in items[1:]:
-                bounding_rect.union_ip( item.pygame_rect )
-        cx = self.cx = bounding_rect.centerx
-        cy = self.cy = bounding_rect.centery
+                bounding_rect.union_ip( item.patch_rect )
+        self.bounding_rect = bounding_rect
+        cx = self.cx = 0.5 * (bounding_rect.xlims[0] + bounding_rect.xlims[1])
+        cy = self.cy = 0.5 * (bounding_rect.ylims[0] + bounding_rect.ylims[1])
 
         self.items = []
         nw_items = []
@@ -348,10 +407,14 @@ class QuadTree(object):
 
         for item in items:
             # Which of the sub-quadrants does the item overlap?
-            in_nw = item.pygame_rect.left <= cx and item.pygame_rect.top <= cy
-            in_sw = item.pygame_rect.left <= cx and item.pygame_rect.bottom >= cy
-            in_ne = item.pygame_rect.right >= cx and item.pygame_rect.top <= cy
-            in_se = item.pygame_rect.right >= cx and item.pygame_rect.bottom >= cy
+            # in_nw = item.patch_rect.left <= cx and item.patch_rect.top <= cy
+            # in_sw = item.patch_rect.left <= cx and item.patch_rect.bottom >= cy
+            # in_ne = item.patch_rect.right >= cx and item.patch_rect.top <= cy
+            # in_se = item.patch_rect.right >= cx and item.patch_rect.bottom >= cy
+            in_nw = item.patch_rect.xlims[0] <= cx and item.patch_rect.ylims[0] <= cy
+            in_sw = item.patch_rect.xlims[0] <= cx and item.patch_rect.ylims[1] >= cy
+            in_ne = item.patch_rect.xlims[1] >= cx and item.patch_rect.ylims[0] <= cy
+            in_se = item.patch_rect.xlims[1] >= cx and item.patch_rect.ylims[1] >= cy
                 
             # If it overlaps all 4 quadrants then insert it at the current
             # depth, otherwise append it to a list to be inserted under every
@@ -366,14 +429,101 @@ class QuadTree(object):
             
         # Create the sub-quadrants, recursively.
         if nw_items:
-            self.nw = QuadTree(nw_items, depth, (bounding_rect.left, bounding_rect.top, cx, cy))
+            self.nw = QuadTree(nw_items, self.depth, (bounding_rect.xlims[0], bounding_rect.ylims[0], cx, cy))
         if ne_items:
-            self.ne = QuadTree(ne_items, depth, (cx, bounding_rect.top, bounding_rect.right, cy))
+            self.ne = QuadTree(ne_items, self.depth, (cx, bounding_rect.ylims[0], bounding_rect.xlims[1], cy))
         if se_items:
-            self.se = QuadTree(se_items, depth, (cx, cy, bounding_rect.right, bounding_rect.bottom))
+            self.se = QuadTree(se_items, self.depth, (cx, cy, bounding_rect.xlims[1], bounding_rect.ylims[1]))
         if sw_items:
-            self.sw = QuadTree(sw_items, depth, (bounding_rect.left, cy, cx, bounding_rect.bottom))
+            self.sw = QuadTree(sw_items, self.depth, (bounding_rect.xlims[0], cy, cx, bounding_rect.ylims[1]))
+
+    def cleanup(self, gos):
+        # recursive function to remove items that have moved and return the set
+        new_items = [item for item in self.items if item.id not in gos]
+        hits = set( gos[key] for key in gos if gos[key] in self.items )
+        self.items = new_items
+
+        # Recursively check the lower quadrants.
+        if self.nw: hits |= self.nw.cleanup(gos)
+        if self.sw: hits |= self.sw.cleanup(gos)
+        if self.ne: hits |= self.ne.cleanup(gos)
+        if self.se: hits |= self.se.cleanup(gos)
+
+        return hits
+
+    def place(self, items):
+        # recursive function to place items
+        
+        if self.depth == 0 or not items:
+            # pdb.set_trace()
+            [self.items.append(item) for item in items if item not in self.items]
+            return
+
+        nw_items = []
+        ne_items = []
+        se_items = []
+        sw_items = []
+
+        for item in items:
+            # Which of the sub-quadrants does the item overlap?
+            in_nw = item.patch_rect.xlims[0] <= self.cx and item.patch_rect.ylims[0] <= self.cy
+            in_sw = item.patch_rect.xlims[0] <= self.cx and item.patch_rect.ylims[1] >= self.cy
+            in_ne = item.patch_rect.xlims[1] >= self.cx and item.patch_rect.ylims[0] <= self.cy
+            in_se = item.patch_rect.xlims[1] >= self.cx and item.patch_rect.ylims[1] >= self.cy
+                
+            # If it overlaps all 4 quadrants then insert it at the current
+            # depth, otherwise append it to a list to be inserted under every
+            # quadrant that it overlaps.
+            if in_nw and in_ne and in_se and in_sw:
+                if item not in self.items: self.items.append(item)
+            else:
+                if in_nw: nw_items.append(item)
+                if in_ne: ne_items.append(item)
+                if in_se: se_items.append(item)
+                if in_sw: sw_items.append(item)
+            
+        # place or create the sub-quadrants, recursively.
+        if self.nw and nw_items:
+            self.nw.place(nw_items)
+        elif nw_items:
+            self.nw = QuadTree(nw_items, self.depth, (self.bounding_rect.xlims[0], self.bounding_rect.ylims[0], self.cx, self.cy))
+
+        if self.ne and ne_items:
+            self.ne.place(ne_items)
+        elif ne_items:
+            self.ne = QuadTree(ne_items, self.depth, (self.cx, self.bounding_rect.ylims[0], self.bounding_rect.xlims[1], self.cy))
+
+        if self.se and se_items:
+            self.se.place(se_items)
+        elif se_items:
+            self.se = QuadTree(se_items, self.depth, (self.cx, self.cy, self.bounding_rect.xlims[1], self.bounding_rect.ylims[1]))
+
+        if self.sw and sw_items:
+            self.sw.place(sw_items)
+        elif sw_items:
+            self.sw = QuadTree(sw_items, self.depth, (self.bounding_rect.xlims[0], self.cy, self.cx, self.bounding_rect.ylims[1]))
  
+    def update(self, gos):
+        """ update items indicated by keys, this way only items that move will update.
+        
+        steps
+        1. remove items recursively
+        2. reinsert from top-level
+        """
+        if gos is not None:
+            hits = self.cleanup(gos)
+            # only place the gos that were already in the tree
+            # this way items don't accidentally get re-added
+            self.place(list(hits))
+
+    def add(self, gos):
+        if gos is not None:
+            go_list = [gos[key] for key in gos]
+            self.place(go_list)
+
+    def remove(self, gos):
+        if gos is not None:
+            self.cleanup(gos)
  
     def hit(self, rect):
         """Returns the items that overlap a bounding rectangle.
@@ -387,16 +537,18 @@ class QuadTree(object):
         """
 
         # Find the hits at the current level.
-        hits = set( self.items[n] for n in rect.collidelistall( [item.pygame_rect for item in self.items] ) )
+        ls = [item.patch_rect for item in self.items]
+        indices = rect.collidelistall( ls )
+        hits = set( self.items[n] for n in indices)
         
         # Recursively check the lower quadrants.
-        if self.nw and rect.left <= self.cx and rect.top <= self.cy:
+        if self.nw and rect.xlims[0] <= self.cx and rect.ylims[0] <= self.cy:
             hits |= self.nw.hit(rect)
-        if self.sw and rect.left <= self.cx and rect.bottom >= self.cy:
+        if self.sw and rect.xlims[0] <= self.cx and rect.ylims[1] >= self.cy:
             hits |= self.sw.hit(rect)
-        if self.ne and rect.right >= self.cx and rect.top <= self.cy:
+        if self.ne and rect.xlims[1] >= self.cx and rect.ylims[0] <= self.cy:
             hits |= self.ne.hit(rect)
-        if self.se and rect.right >= self.cx and rect.bottom >= self.cy:
+        if self.se and rect.xlims[1] >= self.cx and rect.ylims[1] >= self.cy:
             hits |= self.se.hit(rect)
 
         return hits

@@ -89,7 +89,7 @@ class MasterClass(object):
     self.process_actions(actions)
 
     # update physics with time passage
-    self.holder.physicsClass.update(seconds, self.holder.gameObjects, self.holder.worldClass, 'staticObjects')
+    self.holder.physicsClass.update(seconds, self.holder.gameObjects, self.holder.new_game_objects, self.holder.worldClass, 'staticObjects')
 
     # update screen
     self.holder.playerClass.screenClass.update(self.holder.playerClass.gameObject.x, self.holder.playerClass.gameObject.y)
@@ -176,6 +176,8 @@ def main():
     
     #update game world
     seconds = clock.tick(FPS) / 1000.0
+    # force each update to be 1 / FPS seconds, so that lag doesn't send objects flying
+    seconds = 1.0 / FPS
     master.update(seconds, pygame.event.get())
     
     #write screen

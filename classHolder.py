@@ -48,6 +48,7 @@ class ClassHolder(object):
     self.physicsClass = Physics(self.playerClass)
     # game objects dict
     self.gameObjects = {}
+    self.new_game_objects = {}
     self.gameObjectsARR = []
     self.maps = {}
 
@@ -99,7 +100,7 @@ class ClassHolder(object):
     """
     valid_cmds = ["GEN_OBJ", "DEL_OBJ", "PLAY_SOUND", "CHANGE_MUSIC"]
 
-    max_nb_messages = 10
+    max_nb_messages = 100
     count = 0
     while not MESSAGES.empty() and count < max_nb_messages:
       count += 1
@@ -135,10 +136,17 @@ class ClassHolder(object):
     
   def add_game_object(self, x, y, object):
     self.gameObjects[object.id] = object
+    object.update_rect()
+    if self.physicsClass.go_tree:
+      self.physicsClass.go_tree.add({object.id: object})
+    # self.new_game_objects[object.id] = object
     # self.gameObjectsARR[int(x)][int(y)].append(object.id)
 
   def remove_game_object(self, obj):
     del self.gameObjects[obj.id]
+    if self.physicsClass.go_tree:
+      self.physicsClass.go_tree.remove({obj.id: obj})
+      # print(len(self.physicsClass.go_tree.items))
 
   # def set_map(self):
   #   mapMatrix = np.empty((mapWidth, mapHeight), dtype='int')

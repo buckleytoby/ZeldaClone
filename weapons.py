@@ -30,7 +30,7 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
         super().__init__()
         
         # set values
-        self.values['can_transfer_momentum'] = False
+        self.values['can_transfer_momentum'] = False # weapons don't transfer momentum directly, only when a hit is landed
         self.values['artWidth']      = self.w
         self.values['artHeight']     = self.h
         self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change

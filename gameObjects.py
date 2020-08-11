@@ -70,6 +70,7 @@ class StaticGameObject(object):
     self.heading = 0.0 # from 0 to 2pi
     self.patch_rect = self.make_patch_rect()
     self.pygame_rect = self.patch_rect.convert_to_pygame_rect()
+    self.pygame_screen_rect = self.patch_rect.convert_to_screen_rect([0, 0]).convert_to_pygame_rect()
     # visuals
     self.visible = False
     self.has_sprite = False #False --> rect
@@ -171,15 +172,17 @@ class StaticGameObject(object):
     lt = [self.x, self.y]
     wh = [self.width, self.height]
     return make_rect(lt, wh)
+
+  def update_rect(self):
+    self.patch_rect.x = self.x
+    self.patch_rect.y = self.y
+    self.patch_rect.width = self.width
+    self.patch_rect.height = self.height
   
   def get_rect(self):
     """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
     """
     #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
-    self.patch_rect.x = self.x
-    self.patch_rect.y = self.y
-    self.patch_rect.width = self.width
-    self.patch_rect.height = self.height
     return self.patch_rect
   
   def update_pygame_rect(self):
@@ -190,6 +193,18 @@ class StaticGameObject(object):
     self.pygame_rect.y = self.y
     self.pygame_rect.width = self.width
     self.pygame_rect.height = self.height
+  
+  def update_pygame_screen(self, screen_location):
+    """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
+    """
+    self.pygame_screen_rect.x = (self.x - screen_location[0]) * pixel_factor[0]
+    self.pygame_screen_rect.y = (self.y - screen_location[1]) * pixel_factor[1]
+    self.pygame_screen_rect.width = self.width * pixel_factor[0]
+    self.pygame_screen_rect.height = self.height * pixel_factor[1]
+
+  def get_pygame_rect(self):
+    self.update_pygame_rect()
+    return self.pygame_rect
 
   def get_rect_art(self):
     """ get pygame Rect of the object's art. i.e. the portion that can be collided with.

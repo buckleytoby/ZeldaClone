@@ -95,24 +95,25 @@ class World(object):
     self.edit=False #whether or not in edit mode
     self.sounds = {}
     self.music = {}
+    self.bake_size = 4
 
     # --- debugging ---
     self.draw_collision_boxes = False
 
   def bake_tiles(self):
     """ iterate through the layers and generate n-by-n tile surfaces which will be blitted to the screen. The advantage is that baking only occurs once per world, which will reduce the # of required blits """
-    bake_size = 4
+    bake_size = self.bake_size
 
     ### set-up
     # get size of map
     baked_map = -1 * np.ones_like( self.getMap('staticObjects') )
     # 
 
-    baked_tile_count = 0
     drawn = defaultdict(bool)
+    surf_hash = defaultdict(lambda: pygame.Surface((bake_size * pixelsPerTileWidth, bake_size * pixelsPerTileHeight)))
     # iterate through layers
     def recurse(mapType): #must check ability to change isDrawn in nested Function, it has bit me before
-      nonlocal baked_tile_count
+      nonlocal surf_hash
       map = self.maps[mapType]
       if drawn[mapType]:
         return
@@ -122,13 +123,16 @@ class World(object):
       drawn[mapType] = True
       if map.invisible: return
 
+      print("Baking map: {}".format(mapType))
       map_arr = self.maps[mapType].tileData
 
+      # assumes that each map is the same size (should be true if using Tiled)
+      baked_tile_count = 0
       # iterate through the map
       for i in range(0, map.numTilesWidth, bake_size):
         for j in range(0, map.numTilesHeight, bake_size):
           # make new surface
-          surf = pygame.Surface((bake_size * pixelsPerTileWidth, bake_size * pixelsPerTileHeight))
+          surf = surf_hash[baked_tile_count]
           # copy to surface
           for k in range(bake_size):
             # out of bounds protection
@@ -451,10 +455,19 @@ class World(object):
     self.draw_player_mana()
     self.draw_attack_cooldown()
 
+  def baked_screen_location(self):
+    return self.screenLocation - self.bake_size - 1
+
+  def baked_screen_wrt_screen(self):
+    # location of the baked screen w.r.t. the screen (in pixels)
+    x = (self.baked_screen_location() - self.screenLocation) * pixel_factor
+    # x = - np.array([self.bake_size, self.bake_size]) * pixel_factor
+    return x
+
   def clipScreen(self, mapLength):
     maxIDX_x, maxIDX_y = np.clip(self.screenMaxIDX, np.zeros(2), 
       np.array(mapLength))
-    minIDX_x, minIDX_y = np.clip(self.screenLocation, np.zeros(2), 
+    minIDX_x, minIDX_y = np.clip(self.baked_screen_location(), np.zeros(2), 
       np.array(mapLength))
     # convert to integer
     maxIDX_x = int(maxIDX_x); maxIDX_y = int(maxIDX_y)
@@ -469,15 +482,8 @@ class World(object):
     maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX - 1, mapLenY - 1))
 
 
-    # add sub-tile offset
-    
-    # TODO: offset backwards so that it'll appear correct 
-    pixeli = 0
-    pixelj = 0
-    offset = -1.0 * (self.screenLocation % 1) * pixel_factor
-    width = maxIDX_x + 1 - minIDX_x
-    height = maxIDX_y + 1 - minIDX_y
-    surf = pygame.Surface((width, height))
+    pixeli, pixelj = pixeli0, pixelj0 = self.baked_screen_wrt_screen()
+    offset = -1.0 * (self.baked_screen_location() % 1) * pixel_factor
 
     for i in range(minIDX_x, maxIDX_x+1):
       for j in range(minIDX_y, maxIDX_y+1):
@@ -490,7 +496,7 @@ class World(object):
           
         pixelj += pixelsPerTileHeight
       pixeli += pixelsPerTileWidth
-      pixelj = 0
+      pixelj = pixelj0
 
   def draw_game_objects(self, gameObjects, screen_rect):
     """ iterate through gameobjects and only draw if they're on the screen
@@ -530,11 +536,8 @@ class World(object):
 
   def draw_go_rect(self, go):
     # this is the collision rect
-    rect = go.rect
-    rect_screen = rect.convert_to_screen_rect(self.screenLocation)
-    rect_pygame = rect_screen.convert_to_pygame_rect()
-    # World.screen.draw.filled_rect(rect_pygame, go.rgb)
-    pygame.draw.rect(World.screen, go.rgb, rect_pygame)
+    go.update_pygame_screen(self.screenLocation)
+    pygame.draw.rect(World.screen, go.rgb, go.pygame_screen_rect)
 
   def low_draw_art(self, go):
     if go.visible and go.drawn == False:

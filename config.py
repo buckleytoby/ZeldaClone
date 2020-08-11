@@ -11,6 +11,7 @@ from collections import defaultdict
 from threading import Thread
 import threading
 import pytiled_parser
+import itertools
 
 # debugging
 SOUND_ON = False

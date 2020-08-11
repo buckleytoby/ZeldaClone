@@ -13,8 +13,8 @@ class GravityArc(AI.Basic):
     def get_action(self, elapsed_time):
         """ get direction from heading and project velocity in that direction
         """
-        dv = self.parent.velocity
-        dv[1] += elapsed_time * 9.81 / 2.0 # integrate "half" gravity due to perspective
+        dv = 0.8 * self.parent.velocity / elapsed_time
+        dv[1] += 9.81 / 40.0 # integrate "half" gravity due to perspective
         out = {'dv': dv}
         cbs = []
         return out, cbs
@@ -24,8 +24,8 @@ class ExplosionParticle(particles.ParticleObj):
     super().__init__(**kwargs)
 
     self.nb_updates = self.duration / self.update_rate
-    self.size_delta_w = self.width / self.nb_updates
-    self.size_delta_h = self.height / self.nb_updates
+    self.size_delta_w = self.width / (self.nb_updates * 5)
+    self.size_delta_h = self.height / (self.nb_updates * 5)
     self.rgb = (255, 0, 0)
 
     self.AI = GravityArc(self)
@@ -45,17 +45,57 @@ class ExplosionFactory(factory.ParticleObjFactory):
       self.creator = ExplosionParticle
 
       # params
-      self.nb_particles = 10
+      self.nb_particles = 25
+      self.nb_stored_particles = 10 * self.nb_particles
       self.min_particle_size = 0.25 # tiles
       self.max_particle_size = 0.5 # tiles
 
       # values
-      self.values['max_velocity'] = 3.0
-      self.values['duration'] = 1.5
+      self.values['max_velocity'] = 0.125
+      self.values['duration'] = 1.0
       self.values['objectType'] = "Explosion"
       self.values['collideable'] = False
+
+  def init_emitter(self):
+    # create many explosion particles and store until use
+    self.pool = itertools.cycle([])
+
+    for i in range(self.nb_stored_particles):
+      # random angle, speed, and size
+      a, b = 0, 2.0 * np.pi
+      heading = (b - a) * np.random.random() + a
+      a, b = self.min_particle_size, self.max_particle_size
+      size = (b - a) * np.random.random() + a
+      a, b = 0.5 * self.values['max_velocity'], self.values['max_velocity']
+      velocity = (b - a) * np.random.random() + a
+
+      direction = (m2d.Orientation(heading) * m2d.Vector.e0).array
+      dx_actual, dy_actual = velocity * direction
+
+      obj = super().create(0, 0, dx_actual = dx_actual, dy_actual = dy_actual, width = size, height = size)
+      # setup
+      obj.setSpriteStatus(visible=True)
+
+      self.pool.append(obj)
+    
+  def create_new(self, x, y):
+    # take non-active particles from the emitter
+
+    for i in range(self.nb_particles):
+      particle = next(self.pool)
+
+      xx = x + 0.1 * np.random.random()
+      yy = y + 0.1 * np.random.random()
+
+
+    
+    # start the threads
+    [obj.start() for obj in out]
+    return out
+
     
   def create(self, x, y):
+    # create many explosion particles and store until use
     out = []
 
     for i in range(self.nb_particles):
@@ -69,7 +109,7 @@ class ExplosionFactory(factory.ParticleObjFactory):
 
       direction = (m2d.Orientation(heading) * m2d.Vector.e0).array
       dx_actual, dy_actual = velocity * direction
-
+      
       xx = x + 0.1 * np.random.random()
       yy = y + 0.1 * np.random.random()
 
@@ -78,10 +118,10 @@ class ExplosionFactory(factory.ParticleObjFactory):
       obj.setSpriteStatus(visible=True)
 
       out.append(obj)
-
     
     # start the threads
     [obj.start() for obj in out]
     return out
 
 explosionFactory = ExplosionFactory()
+
