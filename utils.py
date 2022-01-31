@@ -1,6 +1,19 @@
 
 from config       import *
 
+def rotate_surfs(face, surfs):
+    # rotate surfs 3 times by 90 degrees each 
+    # surfs := list of surfs
+    out = {}
+    out[face] = surfs
+
+    for i in range(3):
+        new_face = (face + 1) % 4 # animation face enum is set up to be counter-clockwise
+        out[new_face] = [pygame.transform.rotate(surf, 90) for surf in out[face]]
+        face = new_face
+
+    return out
+
 def get_mouse_pos(units):
     # units == "tiles" means the 'in-game' units
     # units == "pixels" means the 'pygame' units
@@ -73,13 +86,16 @@ class PatchExt(m2d.geometry.Patch):
             # pdb.set_trace()
 
     def collide(self, other):
-        """Compute the intersection with 'other'. If overlapping a Patch will
-        be returned representing the overlap. Otherwise 'None' is
-        returned.
+        """Compute if self collides with other
+        if (rect1.x < rect2.x + rect2.width &&
+            rect1.x + rect1.width > rect2.x &&
+            rect1.y < rect2.y + rect2.height &&
+            rect1.y + rect1.height > rect2.y) {
+                // collision detected!
+            }
         """
-        xlims_new = max(self.xlims[0], other.xlims[0]), min(self.xlims[1], other.xlims[1])
-        ylims_new = max(self.ylims[0], other.ylims[0]), min(self.ylims[1], other.ylims[1])
-        if xlims_new[0] < xlims_new[1] and ylims_new[0] < ylims_new[1]:
+        if self.xlims[0] < other.xlims[1] and self.xlims[1] > other.xlims[0] and \
+           self.ylims[0] < other.ylims[1] and self.ylims[1] > other.ylims[0]:
             return True
         else:
             return False
@@ -87,7 +103,7 @@ class PatchExt(m2d.geometry.Patch):
     def get_center(self):
             """ get the center
             """
-            center = 0.5 * np.array([np.sum(self.xlims), np.sum(self.ylims)])
+            center = 0.5 * np.array([self.xlims[0] + self.xlims[1], self.ylims[0] + self.ylims[1]])
             return center
     center = property(get_center)
 

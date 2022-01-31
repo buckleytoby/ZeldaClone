@@ -45,14 +45,14 @@ class ExplosionFactory(factory.ParticleObjFactory):
       self.creator = ExplosionParticle
 
       # params
-      self.nb_particles = 25
+      self.nb_particles = 7
       self.nb_stored_particles = 10 * self.nb_particles
-      self.min_particle_size = 0.25 # tiles
-      self.max_particle_size = 0.5 # tiles
+      self.min_particle_size = 0.15 # tiles
+      self.max_particle_size = 0.4 # tiles
 
       # values
       self.values['max_velocity'] = 0.125
-      self.values['duration'] = 1.0
+      self.values['duration'] = 0.75
       self.values['objectType'] = "Explosion"
       self.values['collideable'] = False
 

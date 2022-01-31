@@ -44,7 +44,7 @@ class ClassHolder(object):
   def __init__(self, configFile):
     self.configFile = process_file_name(configFile)
     self.playerClass  = Player()
-    self.worldClass   = World(self)
+    self.worldClass   = None # is set in the .txt file
     self.physicsClass = Physics(self.playerClass)
     # game objects dict
     self.gameObjects = {}
@@ -90,6 +90,16 @@ class ClassHolder(object):
     screenLocation = self.playerClass.screenClass.getLocation()
     screen_rect = self.playerClass.screenClass.rect
     self.worldClass.writeScreen(self.gameObjects, self.gameObjectsARR, screenLocation, screen_rect)
+
+  def set_world(self, name):
+    self.worldClass = self.worlds[name]
+
+  def change_world(self, portal):
+    # when player enters an inter-world portal, load the appropriate map and place player at the correct spot
+
+
+
+    self.set_world(target_world)
 
   def update(self):
     """ pop queue messages and perform the commands
@@ -310,6 +320,11 @@ class ClassHolder(object):
           f=g[-1]
         else:
           break
+
+      elif line == "[world]":
+        name = f.parse_lines()
+        self.worlds[name] = World(self)
+        self.set_world(name)
 
       elif line == "[json_map]":
         json_fn = process_file_name( f.parse_lines() )

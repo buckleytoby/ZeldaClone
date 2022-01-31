@@ -2,6 +2,8 @@
 from config       import *
 from utils        import *
 import characters
+import gameObjects
+Anim = gameObjects.Animation
 
 
 
@@ -179,7 +181,6 @@ class World(object):
         self.tileArt.addTile(gamegid + count, tile)
         count += 1
 
-
   def loadGameObjects(self, imagefile, f, factories, clear=False):
     # reads in image, resets, fills with sprites
     # input: 'f' is the file object which specifies names of game objects
@@ -206,11 +207,22 @@ class World(object):
       for tilex in range(nb_w): # ensure we'll go left-right, then top-bottom
         rect = (tilex * pixelWidth, tiley * pixelHeight, pixelWidth, pixelHeight)
         tile = image.subsurface(rect)
+        if tile.get_bounding_rect().size == (0, 0):
+          continue
         tile = pygame.transform.scale(tile, (int(tileWidth * pixelsPerTileWidth), 
                 int(tileHeight * pixelsPerTileHeight)))
         spriteRow.append(tile)
 
-    self.objectArts[objectType].setData(spriteRow)
+    line = f.parse_lines()
+    if line == "rotate":
+      line = f.parse_lines()
+      face = gameObjects.Animation.face_dict[line]
+      surfs_dict = rotate_surfs(face, spriteRow)
+      sprites = surfs_dict[Anim.left] + surfs_dict[Anim.down] + surfs_dict[Anim.right] + surfs_dict[Anim.up]
+    else:
+      sprites = spriteRow
+
+    self.objectArts[objectType].setData(sprites)
     
   def loadGameObjects2(self, imagefile, f, factories, clear=False): #height/width of tiles
     # reads in image, resets, fills with sprites
@@ -312,7 +324,7 @@ class World(object):
     # return False if indices are out of range
     i, j = indices
     data = self.maps[mapType].tileData
-    # TODO: optimize this expression
+    # TODO: optimize this expression ... don't need to check indices if I clip the indice generation
     if i > -1 and i < data.shape[0] and j > -1 and j < data.shape[1]:
     # if np.all( np.logical_and( indices > (0, 0), indices < data.shape ) ):
       tileValue = data[i][j]
@@ -547,8 +559,8 @@ class World(object):
           #(self.screenLocationX, self.screenLocationY))
 
         objectType = go.objectType
-        # spriteIndex = go.animation.getSpriteIndex()
-        spriteIndex = go.animation.animationIndex
+        spriteIndex = go.animation.getSpriteIndex()
+        # spriteIndex = go.animation.animationIndex
         sprite = self.objectArts[objectType].getSprite(spriteIndex)
         World.screen.blit(sprite, (xscreen, yscreen))
 

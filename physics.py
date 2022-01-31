@@ -50,13 +50,14 @@ class Physics(object):
     [game_objects[key].update_rect() for key in game_objects]
 
     # use a quadtree
-    go_tree = utils.QuadTree(go_list, depth=6)
+    go_tree = utils.QuadTree(go_list, depth=10)
     return go_tree
 
   # @profile
   def get_active_game_objects(self, gameObjects, new_game_objects):
     # update quadtree only with gos that may have moved last frame
     if self.previous_active_gos:
+      [self.previous_active_gos[key].update_rect() for key in self.previous_active_gos]
       self.go_tree.update(self.previous_active_gos)
     else:
       self.go_tree = self.make_go_quadtree(gameObjects)
@@ -217,17 +218,16 @@ class Physics(object):
     """ take a potentially collision-filled map and resolve collisions
     such that no active object is in-collision """
     # try updating first
-    go_list = [gameObjects[key] for key in gameObjects if gameObjects[key].collideable]
-    gos = {go.id: go for go in go_list}
-    tree = self.make_go_quadtree(gos)
+    [gameObjects[key].update_rect() for key in gameObjects]
+    self.go_tree.update(gameObjects)
     
-    for key in gos:
+    for key in gameObjects:
       # compute the resolution for go1 by summing up the impacts of all GO's it interacts with
-      go1 = gos[key]
+      go1 = gameObjects[key]
       if not go1.collideable:
         continue
       dv1 = 0.0
-      other_gos = self.get_gos_from_quadtree(tree, go1.rect)
+      other_gos = self.get_gos_from_quadtree(self.go_tree, go1.rect)
       for key2 in other_gos:
         go2 = other_gos[key2]
         # sanity check

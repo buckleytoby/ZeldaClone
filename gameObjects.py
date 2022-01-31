@@ -6,20 +6,42 @@ from utils        import *
 
 
 class Animation(object):
+  # order of enum is counter-clockwise (right hand rule)
   left = 0
   down = 1
   right = 2
   up = 3
+  face_dict = {'left': left, 'down': down, 'right': right, 'up': up}
   def __init__(self):
     self.animationIndex = 0
-    self.face = Animation.down
-    self.index2sprite = np.array(4*[[0,0,1,1,2,2,1,1,0,0,3,3,4,4,3,3]])
-    self.index2sprite[0] += 10
-    self.index2sprite[2] += 5
+    self.face = 0
     self.time_elapsed = 0.0
-    self.update_rate = 0.1
+    self.indices = {i: np.array([0]) for i in range(4) } # default is index 0 for all four faces
 
-  def updateSprite(self, seconds, dx, dy):
+    # params
+    self.passive = False
+    self.update_rate = 0.05
+
+  def register_indices(self, face, indices):
+    # face := Animation.face
+    # indices := list
+    self.indices[face] = np.array(indices)
+
+  def update(self, seconds, dx, dy):
+    if self.passive:
+      self.update_passive(seconds)
+    else:
+      self.update_active(seconds, dx, dy)
+
+  def update_passive(self, seconds):
+    # used for idle animation, which includes weapon animation
+    self.time_elapsed += seconds
+    if self.time_elapsed > self.update_rate:
+      self.time_elapsed -= self.update_rate
+      self.animationIndex += 1
+      self.animationIndex %= self.indices[self.face].shape[0]
+
+  def update_active(self, seconds, dx, dy):
     # check if elapsed time surpasses update rate
     self.time_elapsed += seconds
     if self.time_elapsed > self.update_rate:
@@ -42,12 +64,15 @@ class Animation(object):
           self.face = Animation.up
         self.animationIndex += 1
       elif dx == 0 and dy == 0:
-        # self.animationIndex = 0
-        self.animationIndex += 1
-      self.animationIndex %= self.index2sprite.shape[1]
+        self.animationIndex = 0
+        # self.animationIndex += 1
+      self.animationIndex %= self.indices[self.face].shape[0]
     
   def getSpriteIndex(self):
-    return self.index2sprite[self.face][self.animationIndex]
+    idx = self.indices[self.face][self.animationIndex]
+    # if self.passive:
+    #   print("sprite idx: {}".format(idx))
+    return idx
 
 class StaticGameObject(object):
   id = -1
@@ -271,7 +296,7 @@ class GameObject(StaticGameObject):
       self.update_heading(self.dy_actual, self.dx_actual)
 
     if self.has_sprite:
-      self.animation.updateSprite(seconds, self.dx_actual, self.dy_actual)
+      self.animation.update(seconds, self.dx_actual, self.dy_actual)
 
   @property
   def projectile_heading(self):
@@ -363,7 +388,7 @@ class GameObject(StaticGameObject):
   velocity_mag = property(get_velocity_mag)
 
   def get_unit_velocity(self):
-    out = math_utils.zero_protection_divide(np.array(self.velocity), self.velocity_mag)
+    out = math_utils.divide_vector(np.array(self.velocity), self.velocity_mag)
     return out
   unit_velocity = property(get_unit_velocity)
 
@@ -397,6 +422,7 @@ class Portal(GameObject):
     self.source_id = source_id
     self.target_id = target_id
     self.active = True
+    self.inter_world = False
     self.active_cooldown = 1.0 # seconds
     #
     x = source[0] + 0.25 # make half-tile sized portal centered on tile
@@ -414,11 +440,14 @@ class Portal(GameObject):
   def activate(self, go, portals):
     # @param go: GameObject class object
     if self.active:
-      go.reset_pos(self.target)
-      self.active_cooldowner()
-      # deactivate the target portal too
-      portals[self.target_id].active = False
-      portals[self.target_id].active_cooldowner()
+      if self.inter_world:
+        
+      else:
+        go.reset_pos(self.target)
+        self.active_cooldowner()
+        # deactivate the target portal too
+        portals[self.target_id].active = False
+        portals[self.target_id].active_cooldowner()
 
   def active_cooldowner(self):
     """ spool up a thread """

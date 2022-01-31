@@ -1,3 +1,6 @@
+[world]
+lvl1
+
 [tmx_map]
 [GAME_ROOT]\maps\lvl1.tmx
 
@@ -16,6 +19,7 @@ type=tiles
 tiles2
 [end]
 
+
 [source]
 type=tiles
 [GAME_ROOT]\art\house1.png
@@ -25,6 +29,17 @@ house1
 # loading the map
 [json_map]
 [GAME_ROOT]\maps\lvl1.json
+
+[world]
+lvl2
+
+[tmx_map]
+[GAME_ROOT]\maps\lvl2.tmx
+
+# loading the map
+[json_map]
+[GAME_ROOT]\maps\lvl2.json
+
 
 
 
@@ -100,6 +115,13 @@ type=gameObjects
 SoldierWeapon1
 
 [source]
+type=gameObjects
+[GAME_ROOT]\art\player_sword1.png
+PlayerWeapon1
+rotate
+up
+
+[source]
 type=childGameObjects
 MiniSoldier Soldier
 MegaSoldier Soldier
@@ -108,6 +130,7 @@ Arrow2 Arrow1
 Arrow3 Arrow1
 Arrow4 Arrow1
 Arrow5 Arrow1
+Arrow6 Arrow1
 SpreadShot Arrow1
 SpreadShotBoss1Phase3 Arrow1
 BallOnChain2 BallOnChain1

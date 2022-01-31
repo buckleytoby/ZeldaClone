@@ -51,6 +51,11 @@ class SoldierFactory(factory.GameObjectFactory):
 
     # setup
     object.setSpriteStatus(visible=True, has_sprite=True)
+    indices = np.array(4*[[0,0,1,1,2,2,1,1,0,0,3,3,4,4,3,3]])
+    indices[0] += 10
+    indices[2] += 5
+    for i in range(4):
+      object.animation.register_indices(i, indices[i])
     return object
 
 class PlayerFactory(SoldierFactory):
@@ -84,6 +89,11 @@ class PlayerFactory(SoldierFactory):
 
     # setup
     object.setSpriteStatus(visible=True, has_sprite=True)
+    indices = np.array(4*[[0,0,1,1,2,2,1,1,0,0,3,3,4,4,3,3]])
+    indices[0] += 10
+    indices[2] += 5
+    for i in range(4):
+      object.animation.register_indices(i, indices[i])
     return object
 
 
@@ -172,6 +182,11 @@ class ArcherFactory(factory.GameObjectFactory):
 
     # setup
     object.setSpriteStatus(visible=True, has_sprite=True)
+    indices = np.array(4*[[0, 1, 2, 1, 0, 3, 4, 3]])
+    indices[0] += 10
+    indices[2] += 5
+    for i in range(4):
+      object.animation.register_indices(i, indices[i])
     return object
 
 class Archer2Factory(ArcherFactory):

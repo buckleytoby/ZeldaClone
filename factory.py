@@ -88,6 +88,8 @@ class GhostParticleFactory(ParticleObjFactory):
     # setup
     object.setSpriteStatus(visible=True, has_sprite=True)
     object.animation.update_rate = self.values['update_rate']
+    object.animation.passive = True # will update even when still
+    object.animation.register_indices(0, range(7))
 
     # start the thread
     object.start()
