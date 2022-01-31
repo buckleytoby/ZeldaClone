@@ -2,6 +2,8 @@
 from config       import *
 from utils        import *
 import characters
+import gameObjects
+Anim = gameObjects.Animation
 
 
 
@@ -18,7 +20,7 @@ class ObjectArt(object): #procedure: get sprite index from gameObject.animation.
     
   def getSprite(self, spriteIndx):
     # modulate spriteIndx with length of art
-    idx = spriteIndx % len(self.data)
+    idx = np.min([spriteIndx, len(self.data)-1])
     return self.data[idx]
 
 
@@ -32,15 +34,19 @@ class TileArt(object):
   """ This class defines the different tiles and their attributes
   """
   def __init__(self):
-    self.tiles = []
+    self.tiles = {}
+    self.gamegids = {}
   
   def clear(self):
-    del self.tiles[:]
+    self.tiles.clear()
 
-  def addTile(self, art):
+  def addTile(self, id, art):
     tile = Tile()
     tile.art = art
-    self.tiles.append(tile)
+    self.tiles[id] = tile
+
+  def add_name(self, name, id):
+    self.gamegids[name] = id
 
 class Map(object):
   """ This class holds data for a map in the game. Allows for layering of foreground, background, etc.
@@ -85,31 +91,140 @@ class World(object):
     self.maps = defaultdict(Map)
     self.mapParents = {}
     self.tileArt = TileArt()
+    self.baked_tile_Art = TileArt()
     self.objectArts = {}
     self.neighborMaps = [] #which maps are connected to this one
     self.edit=False #whether or not in edit mode
     self.sounds = {}
     self.music = {}
+    self.bake_size = 4
 
     # --- debugging ---
     self.draw_collision_boxes = False
+
+  def bake_tiles(self):
+    """ iterate through the layers and generate n-by-n tile surfaces which will be blitted to the screen. The advantage is that baking only occurs once per world, which will reduce the # of required blits """
+    bake_size = self.bake_size
+
+    ### set-up
+    # get size of map
+    baked_map = -1 * np.ones_like( self.getMap('staticObjects') )
+    # 
+
+    drawn = defaultdict(bool)
+    surf_hash = defaultdict(lambda: pygame.Surface((bake_size * pixelsPerTileWidth, bake_size * pixelsPerTileHeight)))
+    # iterate through layers
+    def recurse(mapType): #must check ability to change isDrawn in nested Function, it has bit me before
+      nonlocal surf_hash
+      map = self.maps[mapType]
+      if drawn[mapType]:
+        return
+      elif map.children: # not empty list
+        [recurse(childType) for childType in map.children]
+      #draw it
+      drawn[mapType] = True
+      if map.invisible: return
+
+      print("Baking map: {}".format(mapType))
+      map_arr = self.maps[mapType].tileData
+
+      # assumes that each map is the same size (should be true if using Tiled)
+      baked_tile_count = 0
+      # iterate through the map
+      for i in range(0, map.numTilesWidth, bake_size):
+        for j in range(0, map.numTilesHeight, bake_size):
+          # make new surface
+          surf = surf_hash[baked_tile_count]
+          # copy to surface
+          for k in range(bake_size):
+            # out of bounds protection
+            if (i+k) > baked_map.shape[0] - 1:
+              continue
+            for m in range(bake_size):
+              # out of bounds protection
+              if (j+m) > baked_map.shape[1] - 1:
+                continue
+              if not map_arr[i+k][j+m] == -1:
+                art = self.getTileArt(mapType, (i+k, j+m))
+                location = np.array([k, m]) * pixel_factor
+                surf.blit(art, location)
+
+          # save surface
+          self.baked_tile_Art.addTile(baked_tile_count, surf)
+
+          # save index in the baked map
+          baked_map[i][j] = baked_tile_count
+          baked_tile_count += 1
+
+    # call recurse
+    for mapType in self.maps:
+      if mapType == "staticObjects":
+        recurse(mapType)
     
-  def load_tiles(self, imagefile, width, height, clear=False):
+    # register map
+    self.setMap("baked_map", baked_map)
+    
+  def load_tiles(self, imagefile, gamegid, width, height, clear=False):
     #reads in image, resets tileArt, fills with tiles
     if clear:
       self.tileArt.clear()
 
     image = pygame.image.load(imagefile).convert_alpha()
     imgw, imgh = image.get_size()
+    count = 0
     for tiley in range(0,int(imgh/height)):
       for tilex in range(0,int(imgw/width)):
       
         rect = (tilex*width, tiley*height, width, height)
         tile = image.subsurface(rect)
         tile = pygame.transform.scale(tile,(pixelsPerTileWidth,pixelsPerTileHeight))
-        self.tileArt.addTile(tile)
-        
-  def loadGameObjects(self, imagefile, f, factories, clear=False): #height/width of tiles
+        self.tileArt.addTile(gamegid + count, tile)
+        count += 1
+
+  def loadGameObjects(self, imagefile, f, factories, clear=False):
+    # reads in image, resets, fills with sprites
+    # input: 'f' is the file object which specifies names of game objects
+    # moves left to right, then top to bottom along the image
+    # NOTE: Assumes 1 sprite per image file
+
+    if clear:
+      self.objectArts.clear()
+    image = pygame.image.load(imagefile).convert_alpha()
+    imgw, imgh = image.get_size() # in pixels
+    
+    objectType = f.parse_lines()
+    self.objectArts[objectType] = ObjectArt()
+    pixelWidth  = factories[objectType].values['pixelWidth']
+    pixelHeight = factories[objectType].values['pixelHeight']
+    tileWidth   = factories[objectType].values['artWidth']
+    tileHeight  = factories[objectType].values['artHeight']
+
+    nb_w = int( imgw / pixelWidth )
+    nb_h = int( imgh / pixelHeight )
+
+    spriteRow=[]
+    for tiley in range(nb_h):
+      for tilex in range(nb_w): # ensure we'll go left-right, then top-bottom
+        rect = (tilex * pixelWidth, tiley * pixelHeight, pixelWidth, pixelHeight)
+        tile = image.subsurface(rect)
+        if tile.get_bounding_rect().size == (0, 0):
+          continue
+        tile = pygame.transform.scale(tile, (int(tileWidth * pixelsPerTileWidth), 
+                int(tileHeight * pixelsPerTileHeight)))
+        spriteRow.append(tile)
+
+    line = f.parse_lines()
+    if line == "rotate":
+      line = f.parse_lines()
+      face = gameObjects.Animation.face_dict[line]
+      surfs_dict = rotate_surfs(face, spriteRow)
+      sprites = surfs_dict[Anim.left] + surfs_dict[Anim.down] + surfs_dict[Anim.right] + surfs_dict[Anim.up]
+    else:
+      sprites = spriteRow
+
+    self.objectArts[objectType].setData(sprites)
+    
+  def loadGameObjects2(self, imagefile, f, factories, clear=False): #height/width of tiles
     # reads in image, resets, fills with sprites
     # input: 'f' is the file object which specifies names of game objects
     if clear:
@@ -198,14 +313,20 @@ class World(object):
     i, j = indices
     tileValue = self.maps[mapType].tileData[i][j]
     return self.tileArt.tiles[tileValue].art
+    
+  def get_baked_tile_art(self, mapType, indices):
+    i, j = indices
+    tileValue = self.maps[mapType].tileData[i][j]
+    return self.baked_tile_Art.tiles[tileValue].art
 
   # # # # @profile
   def can_tile_collide(self, mapType, indices):
     # return False if indices are out of range
     i, j = indices
     data = self.maps[mapType].tileData
-    # TODO: optimize this expression
-    if np.all( np.logical_and( np.array((i, j)) > (0, 0), np.array((i, j)) < data.shape ) ):
+    # TODO: optimize this expression ... don't need to check indices if I clip the indice generation
+    if i > -1 and i < data.shape[0] and j > -1 and j < data.shape[1]:
+    # if np.all( np.logical_and( indices > (0, 0), indices < data.shape ) ):
       tileValue = data[i][j]
       if tileValue < 0: # null tile
         return True
@@ -296,6 +417,23 @@ class World(object):
     go = self.class_holder.playerClass.gameObject
     self.draw_mana_bar(go, [5, 17], [100, 7])
 
+  def draw_attack_cooldown(self):
+    go = self.class_holder.playerClass.gameObject
+    xy = [5, 29]
+    wh = [100, 7]
+
+    if go.attacker.disabled:
+      value = go.attacker.attack_cooldown_timer.get_elapsed_time()
+      max_value = go.attacker.attack_cooldown
+      #
+      if value > 0 and value < max_value:
+        b = min(255, 255 - (255 * ((value - (max_value - value)) / max_value)))
+        g = min(255, 255 * (value / (max_value)))
+        color = (0, g, 0)
+        wh[0] = int( wh[0] * value / max_value)
+        value_bar = pygame.Rect(xy, wh)
+        pygame.draw.rect(World.screen, color, value_bar)
+
   # # # # # @profile
   def writeScreen(self, gameObjects, gameObjectsARR, screenLocation, screen_rect):
     self.screenLocation = np.array(screenLocation, dtype='float')
@@ -318,18 +456,30 @@ class World(object):
       self.draw_game_objects(gameObjects, screen_rect)
       
     isDrawn = defaultdict(bool)
-    for mapType in self.maps:
-      if mapType == "staticObjects":
-        recurse(mapType)
+
+    # draw the baked map
+    self.drawMap("baked_map")
+    # draw game objects
+    self.draw_game_objects(gameObjects, screen_rect)
 
     # UI on top
     self.draw_player_health()
     self.draw_player_mana()
+    self.draw_attack_cooldown()
+
+  def baked_screen_location(self):
+    return self.screenLocation - self.bake_size - 1
+
+  def baked_screen_wrt_screen(self):
+    # location of the baked screen w.r.t. the screen (in pixels)
+    x = (self.baked_screen_location() - self.screenLocation) * pixel_factor
+    # x = - np.array([self.bake_size, self.bake_size]) * pixel_factor
+    return x
 
   def clipScreen(self, mapLength):
     maxIDX_x, maxIDX_y = np.clip(self.screenMaxIDX, np.zeros(2), 
       np.array(mapLength))
-    minIDX_x, minIDX_y = np.clip(self.screenLocation, np.zeros(2), 
+    minIDX_x, minIDX_y = np.clip(self.baked_screen_location(), np.zeros(2), 
       np.array(mapLength))
     # convert to integer
     maxIDX_x = int(maxIDX_x); maxIDX_y = int(maxIDX_y)
@@ -341,27 +491,24 @@ class World(object):
     mapARR = self.maps[mapType].tileData
     mapLenX, mapLenY = mapARR.shape
     #restrict screen to map-bounds
-    maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX, mapLenY))
+    maxIDX_x, maxIDX_y, minIDX_x, minIDX_y = self.clipScreen((mapLenX - 1, mapLenY - 1))
 
 
-    # add sub-tile offset
-    
-    # TODO: offset backwards so that it'll appear correct 
-    pixeli = 0
-    pixelj = 0
+    pixeli, pixelj = pixeli0, pixelj0 = self.baked_screen_wrt_screen()
+    offset = -1.0 * (self.baked_screen_location() % 1) * pixel_factor
 
-    for i in range(minIDX_x, maxIDX_x):
-      for j in range(minIDX_y, maxIDX_y):
-        if not (mapARR[i][j] == -1 or mapARR[i][j] == 19):
-          offset = -1.0 * (self.screenLocation % 1) * pixel_factor
+    for i in range(minIDX_x, maxIDX_x+1):
+      for j in range(minIDX_y, maxIDX_y+1):
+        if not mapARR[i][j] == -1:
           location = (pixeli, pixelj) + offset
 
-          art = self.getTileArt(mapType, (i, j))
+          art = self.get_baked_tile_art(mapType, (i, j))
           World.screen.blit(art, location)
-        
+
+          
         pixelj += pixelsPerTileHeight
       pixeli += pixelsPerTileWidth
-      pixelj = 0
+      pixelj = pixelj0
 
   def draw_game_objects(self, gameObjects, screen_rect):
     """ iterate through gameobjects and only draw if they're on the screen
@@ -401,11 +548,8 @@ class World(object):
 
   def draw_go_rect(self, go):
     # this is the collision rect
-    rect = go.rect
-    rect_screen = rect.convert_to_screen_rect(self.screenLocation)
-    rect_pygame = rect_screen.convert_to_pygame_rect()
-    # World.screen.draw.filled_rect(rect_pygame, go.rgb)
-    pygame.draw.rect(World.screen, go.rgb, rect_pygame)
+    go.update_pygame_screen(self.screenLocation)
+    pygame.draw.rect(World.screen, go.rgb, go.pygame_screen_rect)
 
   def low_draw_art(self, go):
     if go.visible and go.drawn == False:
@@ -416,6 +560,7 @@ class World(object):
 
         objectType = go.objectType
         spriteIndex = go.animation.getSpriteIndex()
+        # spriteIndex = go.animation.animationIndex
         sprite = self.objectArts[objectType].getSprite(spriteIndex)
         World.screen.blit(sprite, (xscreen, yscreen))
 

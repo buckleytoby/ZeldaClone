@@ -43,21 +43,22 @@ class MasterClass(object):
     
     # load config
     lvl1.loadConfigFile()
+    # bake the map
+    lvl1.worldClass.bake_tiles()
 
     # play background music
-    pygame.mixer.music.load(lvl1.worldClass.music["song1"])
-    pygame.mixer.music.set_volume(0.5)
-    pygame.mixer.music.play(-1)
+    if SOUND_ON:
+      lvl1.CHANGE_MUSIC("song1")
     
     # main game
     config = os.path.join(prefix, "config", "main.txt")
-    self.main = ClassHolder(config)
+    # self.main = ClassHolder(config)
     # load config
-    self.main.loadConfigFile()
+    # self.main.loadConfigFile()
     
     # group all holders
     self.holders = [lvl1,
-                    self.main]
+                    "n/a"]
                     
     # set initial holder
     self.set_holder(self.holders[0])
@@ -67,6 +68,7 @@ class MasterClass(object):
     self.holder = holder
     DATA["game_objects_ref"] = self.holder.gameObjects
     DATA["trigger_areas_ref"] = self.holder.trigger_areas
+    DATA["factories_ref"] = self.holder.factories
     print("# game objects: {}".format(len(DATA["game_objects_ref"]))) # DEBUG
     DATA["player_xy"] = self.holder.playerClass.gameObject.center_of_mass
       
@@ -87,7 +89,7 @@ class MasterClass(object):
     self.process_actions(actions)
 
     # update physics with time passage
-    self.holder.physicsClass.update(seconds, self.holder.gameObjects, self.holder.worldClass, 'staticObjects')
+    self.holder.physicsClass.update(seconds, self.holder.gameObjects, self.holder.new_game_objects, self.holder.worldClass, 'staticObjects')
 
     # update screen
     self.holder.playerClass.screenClass.update(self.holder.playerClass.gameObject.x, self.holder.playerClass.gameObject.y)
@@ -126,7 +128,7 @@ class MasterClass(object):
         # pick up items
         elif go.type == "item":
           # make item
-          item = go.item_maker(self.holder.playerClass.gameObject)
+          item = go.item_maker(go, self.holder.playerClass.gameObject)
 
           # add item
           self.holder.playerClass.gameObject.inventory.add_item(item)
@@ -179,6 +181,8 @@ def main():
     
     #update game world
     seconds = clock.tick(FPS) / 1000.0
+    # force each update to be 1 / FPS seconds, so that lag doesn't send objects flying
+    seconds = 1.0 / FPS
     master.update(seconds, pygame.event.get())
     
     #write screen

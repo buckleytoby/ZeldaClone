@@ -1,6 +1,7 @@
 [source]
 type=tiles
 [GAME_ROOT]\art\tiles.png
+tiles
 [end]
 
 [source]

@@ -1,5 +1,6 @@
 
 from config       import *
+import utils
 from utils        import *
 import gameObjects
 import threading
@@ -86,7 +87,7 @@ class Attacker(object):
         self.mana_regen = 0.0
         self.disabled = False # whether can attack
         self.invincible = False # whether can get hit
-        self.invincible_cooldown = 1.0
+        self.invincible_cooldown = 0.5
 
     def set_health(self, health):
         self.health = health
@@ -105,7 +106,8 @@ class Attacker(object):
     def attack_cooldowner(self):
         """ spool up a thread """
         self.disabled = True
-        daemon_timer(self.attack_cooldown, self.reset_disabled)
+        self.attack_cooldown_timer = daemon_timer(self.attack_cooldown, self.reset_disabled)
+        # BUG?: this is real time and not pygame time
 
     def invincible_cooldowner(self):
         """ spool up a thread """
@@ -118,6 +120,12 @@ class Attacker(object):
     def reset_disabled(self):
         self.disabled = False
 
+    def spawn_objects(self, go, spawn_name):
+        if hasattr(go, spawn_name):
+            factories = get_factories()
+            for name in getattr(go, spawn_name):
+                obj = factories[name].create(go.x, go.y)
+
     def receive_damage(self, go, do):
         """ return True if damage was received """
         if not self.invincible:
@@ -126,10 +134,16 @@ class Attacker(object):
 
                 self.health -= do.power
                 print("Hit {} with {} health left".format(go.objectType, self.health))
+                self.spawn_objects(go, "damage_objects")
 
                 # die, if applicable
                 if self.health < 0.0:
                     die(go)
+
+                    # make go invisible so it's not drawn on the next frame
+                    go.visible = False
+
+                    self.spawn_objects(go, "death_objects")
 
                 # trigger invincibility frames
                 self.invincible_cooldowner()

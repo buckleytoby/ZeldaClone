@@ -19,13 +19,15 @@ class Physics(object):
     self.portal_tree = None
     self.portals = None
     self.portals_rects = []
+    self.previous_active_gos = None
+    self.go_tree = None
 
   def set_portals(self, portals):
     # gen pygame rects
     self.portals = portals
     self.portals_rects = [portal.rect for portal in self.portals]
-    [portal.calc_pygame_rect() for portal in self.portals]
-    self.portal_tree = utils.QuadTree(portals)
+    [portal.update_rect() for portal in self.portals]
+    # self.portal_tree = utils.QuadTree(portals)
 
   def check_portals(self, gameObject):
     if self.portal_tree: # protect against None
@@ -34,22 +36,44 @@ class Physics(object):
       if hit_idx >= 0:
         self.portals[hit_idx].activate(gameObject, self.portals) # teleport!
 
-  # @profile
-  def get_active_game_objects(self, gameObjects):
-    # collect all rects
-    go_list = list(gameObjects.values())
+  def get_gos_from_quadtree(self, tree, pygame_rect):
+    # get rect for the active screen, expanded by a bit
+    hits = self.go_tree.hit(pygame_rect)
+    active_gos = {go.id: go for go in hits}
+    return active_gos
 
-    # calc all pygame rects
-    [go.calc_pygame_rect() for go in go_list]
+  def make_go_quadtree(self, game_objects):
+    # collect all rects
+    go_list = [game_objects[key] for key in game_objects]
+
+    # calc all pygame rects -- needed for now because quadtree uses pygame rects
+    [game_objects[key].update_rect() for key in game_objects]
 
     # use a quadtree
-    self.go_tree = utils.QuadTree(go_list, depth=6)
+    go_tree = utils.QuadTree(go_list, depth=10)
+    return go_tree
+
+  # @profile
+  def get_active_game_objects(self, gameObjects, new_game_objects):
+    # update quadtree only with gos that may have moved last frame
+    if self.previous_active_gos:
+      [self.previous_active_gos[key].update_rect() for key in self.previous_active_gos]
+      self.go_tree.update(self.previous_active_gos)
+    else:
+      self.go_tree = self.make_go_quadtree(gameObjects)
+      
+    if len(new_game_objects) > 0:
+      [new_game_objects[key].update_rect() for key in new_game_objects]
+      self.go_tree.add(new_game_objects)
+      new_game_objects.clear()
+
+    # update DATA
+    DATA["game_object_tree"] = self.go_tree
 
     # get rect for the active screen, expanded by a bit
-    screen = self.playerClass.screenClass.get_footprint_rect().scale(0.15).convert_to_pygame_rect()
-
-    hits = self.go_tree.hit(screen)
-    active_gos = {go.id: go for go in hits}
+    screen = self.playerClass.screenClass.get_footprint_rect().scale(0.15)
+    active_gos = self.get_gos_from_quadtree(self.go_tree, screen)
+    self.previous_active_gos = active_gos
     return active_gos
 
   # def get_active_game_objects2(self, gameObjects):
@@ -74,7 +98,7 @@ class Physics(object):
 
       
   # @profile
-  def update(self, timeElapsed, all_game_objects, worldClass, mapType):
+  def update(self, timeElapsed, all_game_objects, new_game_objects, worldClass, mapType):
     """ 
     Step 1: everybody moves
     Step 2: resolve all collisions
@@ -85,7 +109,7 @@ class Physics(object):
     vel_dict = {}
 
     # get only game objects that are on screen
-    gameObjects = self.get_active_game_objects(all_game_objects)
+    gameObjects = self.get_active_game_objects(all_game_objects, new_game_objects)
     if not gameObjects:
       return
 
@@ -99,7 +123,7 @@ class Physics(object):
 
 
       #gameObject.update(timeElapsed)
-      action, cbs = gameObject.AI.get_action()
+      action, cbs = gameObject.AI.get_action(timeElapsed)
       vel_dict[gameObject.id] = np.zeros(2) #action['dv']
       dx, dy = action['dv']
 
@@ -121,6 +145,7 @@ class Physics(object):
 
     # second, resolve all collisions with gameObjects
     vel_residual = self.collision_resolution(vel_dict, timeElapsed, gameObjects)
+    # vel_residual2 = self.collision_resolution2(vel_dict, timeElapsed, gameObjects)
 
     # third, add residual delta
     for key in gameObjects:
@@ -133,8 +158,9 @@ class Physics(object):
 
       # must be last: check collision against static objects
       indices = gameObject.get_overlap_tiles()
-      for i, j in indices:
-        if worldClass.can_tile_collide(mapType, [i, j]):
+      for ij in indices:
+        if worldClass.can_tile_collide(mapType, ij):
+          i, j = ij
           rect = worldClass.maps[mapType].get_rect(i, j)
           
           dx = gameObject.dx
@@ -142,7 +168,7 @@ class Physics(object):
 
           # pdb.set_trace()
           
-          if gameObject.collide(rect):
+          if gameObject.moveable and gameObject.collide(rect):
             if isinstance(gameObject, attack.DamageObj) and gameObject.die_on_impact:
               gameObject.die()
             # pdb.set_trace()
@@ -167,7 +193,8 @@ class Physics(object):
       gameObject.update(timeElapsed)
 
       # portals
-      self.check_portals(gameObject)
+      # TODO: make check_portals only check GOs on screen?
+      # self.check_portals(gameObject)
 
       # update gameObject in the quadtree
       # TODO
@@ -186,7 +213,38 @@ class Physics(object):
     
     return dv2
 
+  
   def collision_resolution(self, vel_dict, timeElapsed, gameObjects):
+    """ take a potentially collision-filled map and resolve collisions
+    such that no active object is in-collision """
+    # try updating first
+    [gameObjects[key].update_rect() for key in gameObjects]
+    self.go_tree.update(gameObjects)
+    
+    for key in gameObjects:
+      # compute the resolution for go1 by summing up the impacts of all GO's it interacts with
+      go1 = gameObjects[key]
+      if not go1.collideable:
+        continue
+      dv1 = 0.0
+      other_gos = self.get_gos_from_quadtree(self.go_tree, go1.rect)
+      for key2 in other_gos:
+        go2 = other_gos[key2]
+        # sanity check
+        if go1.id == go2.id:
+          continue
+        if go2.collideable: # don't need to check go1.collide(go2) because we already know that from the quadtree search
+          # resolve if damage-object
+          if isinstance(go2, attack.DamageObj):
+            dv1 += self.damage(do=go2, go=go1)
+          # resolve if game-objects are moveable
+          if go1.moveable and go2.can_transfer_momentum:
+            dv1 += self.momentum_trade(go2, go1)
+          # add to vel arr
+      vel_dict[go1.id] += dv1
+    return vel_dict
+
+  def collision_resolution2(self, vel_dict, timeElapsed, gameObjects):
     """ take a potentially collision-filled map and resolve collisions
     such that no active object is in-collision
 
@@ -198,6 +256,7 @@ class Physics(object):
     num_objs = len(gameObjects)
     
     # upper triangular indices, starting 1 right from main diagonal, ensures no repeats
+    # TODO: this is awful, because it cross checks EVERY single object on screen, which could be many many objects if using particles or w/e. So use the previously computed quadtree instead!
     i1, i2 = np.triu_indices(num_objs, 1)
     keys = gameObjects.keys()
 
@@ -209,7 +268,7 @@ class Physics(object):
       if go1.id == go2.id:
         continue
 
-      if go1.collide(go2):
+      if go1.collideable and go2.collideable and go1.collide(go2):
         dv1 = 0.0
         dv2 = 0.0
 
@@ -221,8 +280,9 @@ class Physics(object):
           dv1 += self.damage(do=go2, go=go1)
 
         # resolve if game-objects are moveable
-        if go1.moveable and go2.moveable:
+        if go1.moveable and go2.can_transfer_momentum:
           dv1 += self.momentum_trade(go2, go1)
+        if go2.moveable and go1.can_transfer_momentum:
           dv2 += self.momentum_trade(go1, go2)
 
         # add to vel arr

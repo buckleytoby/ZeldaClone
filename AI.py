@@ -17,7 +17,7 @@ class Basic(object):
     return out
   position = property(get_position)
   
-  def get_action(self):
+  def get_action(self, elapsed_time):
     """ non-action base function """
     dv = np.zeros(2)
     out = {'dv': dv}
@@ -40,7 +40,7 @@ class Follower(Basic):
       vector = target - me
       dist = np.linalg.norm(vector)
       if  dist > self.attack_threshold and dist < self.max_dist_threshold:
-        unit_direction = math_utils.zero_protection_divide(vector, np.linalg.norm(vector))
+        unit_direction = math_utils.divide_vector(vector, np.linalg.norm(vector))
     return unit_direction, dist
 
   def get_dv(self):
@@ -51,7 +51,7 @@ class Follower(Basic):
 
     return dv, dist
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     dv, dist = self.get_dv()
     out = {'dv': dv}
     cbs = []
@@ -64,14 +64,31 @@ class Basic_Attacker(Follower):
     self.wait = False
     self.cooldown = 2.0
     self.dist_threshold = 1.5
+    
+    self.elapsed_time = 0.0
+    self.update_rate = 1.0
+    self.old_dv = np.zeros(2)
+    self.old_dist = 0.0
 
   def reset_wait(self):
     self.wait = False
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     cbs = []
-    dv, dist = self.get_dv()
+    
+    # only update at rate
+    self.elapsed_time += elapsed_time
+    if self.elapsed_time > self.update_rate:
+      self.elapsed_time -= self.update_rate
+      # update dv
+      dv, dist = self.get_dv()
+      self.old_dv = dv
+      self.old_dist = dist
+    else:
+      dv = self.old_dv
+      dist = self.old_dist
 
+    # decide to attack
     if self.wait:
       out = {'dv': dv}
     else:
@@ -92,6 +109,10 @@ class Avoider(Basic):
     self.dist_tol = 5.0
     self.dist_multiplier = 1.0
     self.dist_threshold = 1.5
+    
+    self.elapsed_time = 0.0
+    self.update_rate = 0.1
+    self.old_dv = np.zeros(2)
 
   def get_avoid_dir(self):
     direction = np.zeros(2)
@@ -110,8 +131,10 @@ class Avoider(Basic):
           continue
         else:
           # normalize, inversely proportional 
-          mult = np.clip( math_utils.zero_protection_divide(self.dist_multiplier, dist_to_dmg), -1.0, 1.0)
-          direction += mult * math_utils.normalize(com_vector)
+          # mult = np.clip( math_utils.zero_protection_divide(self.dist_multiplier, dist_to_dmg), -1.0, 1.0)
+          # mult = np.clip( math_utils.divide_vector(self.dist_multiplier, dist_to_dmg), -1.0, 1.0)
+          # direction += mult * math_utils.normalize(com_vector)
+          direction += math_utils.normalize(com_vector)
           # print("direction: {}".format(direction))
 
     out = math_utils.normalize(direction)
@@ -124,8 +147,17 @@ class Avoider(Basic):
       dv = self.parent.max_velocity * unit_direction
     return dv
 
-  def get_action(self):
-    dv = self.get_dv()
+  def get_action(self, elapsed_time):
+    # only update at rate
+    self.elapsed_time += elapsed_time
+    if self.elapsed_time > self.update_rate:
+      print("time: {}".format(self.elapsed_time))
+      self.elapsed_time -= self.update_rate
+      # update dv
+      dv = self.get_dv()
+      self.old_dv = dv
+    else:
+      dv = self.old_dv
     out = {'dv': dv}
     cbs = []
     return out, cbs
@@ -162,8 +194,9 @@ class DmgAvoiderAttacker(AvoiderAttacker):
           continue
         else:
           # normalize, inversely proportional 
-          mult = np.clip( math_utils.zero_protection_divide(self.dist_multiplier, dist_to_dmg), -1.0, 1.0)
-          direction += mult * math_utils.normalize(com_vector)
+          # mult = np.clip( math_utils.vector_divide(self.dist_multiplier, dist_to_dmg), -1.0, 1.0)
+          # direction += mult * math_utils.normalize(com_vector)
+          direction += math_utils.normalize(com_vector)
           # print("direction: {}".format(direction))
 
     out = math_utils.normalize(direction)
@@ -196,7 +229,7 @@ class Boss1Phase1(Basic):
       dv = np.array([-1, 0]) * self.parent.max_velocity
     return dv
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     cbs = []
     dv = self.get_dv()
 
@@ -269,7 +302,7 @@ class Boss1Meta(Basic):
       self.parent.inventory.use_item("Boss1Weapon2")
 
 
-  def get_action(self):
+  def get_action(self, elapsed_time):
     self.update()
     return self.active_ai.get_action()
     

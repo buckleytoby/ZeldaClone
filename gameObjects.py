@@ -6,41 +6,73 @@ from utils        import *
 
 
 class Animation(object):
+  # order of enum is counter-clockwise (right hand rule)
   left = 0
   down = 1
   right = 2
   up = 3
+  face_dict = {'left': left, 'down': down, 'right': right, 'up': up}
   def __init__(self):
     self.animationIndex = 0
-    self.face = Animation.down
-    self.index2sprite = np.array(4*[[0,0,1,1,2,2,1,1,0,0,3,3,4,4,3,3]])
-    self.index2sprite[0] += 10
-    self.index2sprite[2] += 5
+    self.face = 0
+    self.time_elapsed = 0.0
+    self.indices = {i: np.array([0]) for i in range(4) } # default is index 0 for all four faces
 
-  def updateSprite(self, dx, dy):
-    #animation
-    if dx > 0:
-      if self.face != Animation.right: #face: 0-left, 1-down, 2-right, 3-up
-        self.face = Animation.right
+    # params
+    self.passive = False
+    self.update_rate = 0.05
+
+  def register_indices(self, face, indices):
+    # face := Animation.face
+    # indices := list
+    self.indices[face] = np.array(indices)
+
+  def update(self, seconds, dx, dy):
+    if self.passive:
+      self.update_passive(seconds)
+    else:
+      self.update_active(seconds, dx, dy)
+
+  def update_passive(self, seconds):
+    # used for idle animation, which includes weapon animation
+    self.time_elapsed += seconds
+    if self.time_elapsed > self.update_rate:
+      self.time_elapsed -= self.update_rate
       self.animationIndex += 1
-    elif dx < 0:
-      if self.face!=Animation.left:
-        self.face=Animation.left
-      self.animationIndex += 1
-    elif dy > 0:
-      if self.face != Animation.down:
-        self.face = Animation.down
-      self.animationIndex += 1
-    elif dy < 0:
-      if self.face != Animation.up:
-        self.face = Animation.up
-      self.animationIndex += 1
-    elif dx == 0 and dy == 0:
-      self.animationIndex = 0
-    self.animationIndex %= self.index2sprite.shape[1]
+      self.animationIndex %= self.indices[self.face].shape[0]
+
+  def update_active(self, seconds, dx, dy):
+    # check if elapsed time surpasses update rate
+    self.time_elapsed += seconds
+    if self.time_elapsed > self.update_rate:
+      self.time_elapsed -= self.update_rate
+      # increment animation index for each update frame
+      if dx > 0:
+        if self.face != Animation.right: #face: 0-left, 1-down, 2-right, 3-up
+          self.face = Animation.right
+        self.animationIndex += 1
+      elif dx < 0:
+        if self.face!=Animation.left:
+          self.face=Animation.left
+        self.animationIndex += 1
+      elif dy > 0:
+        if self.face != Animation.down:
+          self.face = Animation.down
+        self.animationIndex += 1
+      elif dy < 0:
+        if self.face != Animation.up:
+          self.face = Animation.up
+        self.animationIndex += 1
+      elif dx == 0 and dy == 0:
+        self.animationIndex = 0
+        # self.animationIndex += 1
+      self.animationIndex %= self.indices[self.face].shape[0]
     
   def getSpriteIndex(self):
-    return self.index2sprite[self.face][self.animationIndex]
+    idx = self.indices[self.face][self.animationIndex]
+    # if self.passive:
+    #   print("sprite idx: {}".format(idx))
+    return idx
 
 class StaticGameObject(object):
   id = -1
@@ -48,6 +80,7 @@ class StaticGameObject(object):
     GameObject.id += 1
     self.id = GameObject.id
     self.type = "static_object"
+    self.objectType = "" # for art purposes
     #-------------- default values --------------
     # hitbox
     self.drawHitBox = False
@@ -60,6 +93,9 @@ class StaticGameObject(object):
     self.width = 0.0
     self.height = 0.0
     self.heading = 0.0 # from 0 to 2pi
+    self.patch_rect = self.make_patch_rect()
+    self.pygame_rect = self.patch_rect.convert_to_pygame_rect()
+    self.pygame_screen_rect = self.patch_rect.convert_to_screen_rect([0, 0]).convert_to_pygame_rect()
     # visuals
     self.visible = False
     self.has_sprite = False #False --> rect
@@ -156,14 +192,44 @@ class StaticGameObject(object):
     return make_rect(lt, wh)
 
   reach_rect = property(get_reach_rect)
+
+  def make_patch_rect(self):
+    lt = [self.x, self.y]
+    wh = [self.width, self.height]
+    return make_rect(lt, wh)
+
+  def update_rect(self):
+    self.patch_rect.x = self.x
+    self.patch_rect.y = self.y
+    self.patch_rect.width = self.width
+    self.patch_rect.height = self.height
   
   def get_rect(self):
     """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
     """
-    lt = [self.x, self.y]
-    wh = [self.width, self.height]
     #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
-    return make_rect(lt, wh)
+    return self.patch_rect
+  
+  def update_pygame_rect(self):
+    """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
+    """
+    #rect = pygame.Rect(lt, wh) # Rect(left, top, width, height) -> Rect
+    self.pygame_rect.x = self.x
+    self.pygame_rect.y = self.y
+    self.pygame_rect.width = self.width
+    self.pygame_rect.height = self.height
+  
+  def update_pygame_screen(self, screen_location):
+    """ get pygame Rect of the object's footprint. i.e. the portion that can be collided with.
+    """
+    self.pygame_screen_rect.x = (self.x - screen_location[0]) * pixel_factor[0]
+    self.pygame_screen_rect.y = (self.y - screen_location[1]) * pixel_factor[1]
+    self.pygame_screen_rect.width = self.width * pixel_factor[0]
+    self.pygame_screen_rect.height = self.height * pixel_factor[1]
+
+  def get_pygame_rect(self):
+    self.update_pygame_rect()
+    return self.pygame_rect
 
   def get_rect_art(self):
     """ get pygame Rect of the object's art. i.e. the portion that can be collided with.
@@ -187,7 +253,9 @@ class GameObject(StaticGameObject):
     super().__init__(**kwargs)
     self.type = "game_object"
     # physics
-    self.moveable = True
+    self.moveable = True # if the object can be moved
+    self.collideable = True # if the object can be collided with
+    self.can_transfer_momentum = True # if the object can transfer momentum to objects it interacts with
     self.mass = 70.0
     self.friction = 0.01
     self.reach = 2.0 # tile reach for interactions
@@ -228,7 +296,7 @@ class GameObject(StaticGameObject):
       self.update_heading(self.dy_actual, self.dx_actual)
 
     if self.has_sprite:
-      self.animation.updateSprite(self.dx_actual, self.dy_actual)
+      self.animation.update(seconds, self.dx_actual, self.dy_actual)
 
   @property
   def projectile_heading(self):
@@ -251,12 +319,24 @@ class GameObject(StaticGameObject):
     xmax = int(np.ceil(rect.right) + 1)
     ymin = int(np.floor(rect.top))
     ymax = int(np.ceil(rect.bottom) + 1)
-    try:
-      X, Y = np.mgrid[xmin:xmax:1, ymin:ymax:1]
-    except:
-      pdb.set_trace()
-    indices = np.vstack([X.ravel(), Y.ravel()]).T
-    return indices
+    # try:
+    #   X, Y = np.mgrid[xmin:xmax:1, ymin:ymax:1]
+    # except:
+    #   pdb.set_trace()
+    # indices = np.vstack([X.ravel(), Y.ravel()]).T
+
+    length = (xmax - xmin) * (ymax - ymin)
+    indices2 = np.zeros([length, 2], dtype=int)
+    # using loops
+    for Y in range(ymin, ymax):
+      for X in range(xmin, xmax):
+        x = X - xmin
+        y = Y - ymin
+        idx = (xmax - xmin) * (y) + x
+        indices2[idx][0] = X
+        indices2[idx][1] = Y
+
+    return indices2
 
   def get_rect_total_movement(self):
     """ get pygame Rect of the object between last position and this position
@@ -287,7 +367,15 @@ class GameObject(StaticGameObject):
     else:
       if isinstance(other, PatchExt): out = self.rect.collide(other)
       else: out = self.rect.collide(other.rect)
+
+    # call callback
+    if out: self.collide_callback(other)
+
     return out
+
+  def collide_callback(self, other, *args):
+    # function which gets called when the other object collides with this one
+    pass
   
   def get_velocity(self):
     out = np.array([self.dx_actual, self.dy_actual])
@@ -300,7 +388,7 @@ class GameObject(StaticGameObject):
   velocity_mag = property(get_velocity_mag)
 
   def get_unit_velocity(self):
-    out = math_utils.zero_protection_divide(np.array(self.velocity), self.velocity_mag)
+    out = math_utils.divide_vector(np.array(self.velocity), self.velocity_mag)
     return out
   unit_velocity = property(get_unit_velocity)
 
@@ -334,6 +422,7 @@ class Portal(GameObject):
     self.source_id = source_id
     self.target_id = target_id
     self.active = True
+    self.inter_world = False
     self.active_cooldown = 1.0 # seconds
     #
     x = source[0] + 0.25 # make half-tile sized portal centered on tile
@@ -351,11 +440,14 @@ class Portal(GameObject):
   def activate(self, go, portals):
     # @param go: GameObject class object
     if self.active:
-      go.reset_pos(self.target)
-      self.active_cooldowner()
-      # deactivate the target portal too
-      portals[self.target_id].active = False
-      portals[self.target_id].active_cooldowner()
+      if self.inter_world:
+        
+      else:
+        go.reset_pos(self.target)
+        self.active_cooldowner()
+        # deactivate the target portal too
+        portals[self.target_id].active = False
+        portals[self.target_id].active_cooldowner()
 
   def active_cooldowner(self):
     """ spool up a thread """

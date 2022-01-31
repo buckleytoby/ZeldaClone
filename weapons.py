@@ -5,6 +5,8 @@ import math_utils
 import factory
 import AI
 import attack
+import gameObjects
+Anim = gameObjects.Animation
 
 weapons_list = []
         
@@ -14,6 +16,7 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
     """
     def __init__(self, **kwargs):
         self.name = "SoldierWeapon1"
+        self.art_name = self.name
         self.w = 0.85 # width of hitbox
         self.h = 0.85 # height of hitbox
         self.ox = 0.75 # offset of hitbox (to center)
@@ -24,7 +27,18 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
         self.cooldown = 0.6
         self.is_continuous = False
 
+
+
         super().__init__()
+        
+        # set values
+        self.values['can_transfer_momentum'] = False # weapons don't transfer momentum directly, only when a hit is landed
+        self.values['artWidth']      = self.w
+        self.values['artHeight']     = self.h
+        self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change
+        self.values['pixelHeight'] = 24 # size of the sprite image, depends on image size, shouldn't change
+        
+
         self.__dict__.update(kwargs)
 
     def make_rect(self, go):
@@ -52,22 +66,55 @@ class SoldierWeapon1FCT(factory.DamageObjFactory):
             parent_id = go.id,
             team_id = go.team_id,
             duration = self.duration,
-            objectType = self.name,
+            objectType = self.art_name,
             power = self.power,
-            mass = self.mass)
+            mass = self.mass,
+            die_on_impact = False,
+            )
 
         # DEBUG
-        made.setSpriteStatus(visible=True)
+        made.setSpriteStatus(visible=True, has_sprite=False)
         # pdb.set_trace()
         return made
 
 soldierWeapon1FCT = SoldierWeapon1FCT()
-playerWeapon1FCT = SoldierWeapon1FCT(
-                    name="PlayerWeapon1",
-                    power=34.0,
-                    ox = 1.0,
-                    h = 1.5,
-                    )
+
+class PlayerWeapon1FCT(SoldierWeapon1FCT):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.name = "PlayerWeapon1"
+        self.power = 34.0
+        self.ox = 1.0
+        self.h = 1.5
+        self.w = 1.5
+        self.duration = 0.2
+        self.mass = 2000.0 # determines weapon blow-back
+        self.cooldown = 0.6
+        self.is_continuous = False
+        self.__dict__.update(kwargs)
+
+        
+        # set values
+        self.values['can_transfer_momentum'] = False # weapons don't transfer momentum directly, only when a hit is landed
+        self.values['artWidth']      = self.w
+        self.values['artHeight']     = self.h
+        self.values['pixelWidth'] = 32 # size of the sprite image, depends on image size, shouldn't change
+        self.values['pixelHeight'] = 32 # size of the sprite image, depends on image size, shouldn't change
+        
+
+    def make(self, go):
+        obj = super().make(go)
+        obj.objectType = "PlayerWeapon1"
+        obj.setSpriteStatus(visible=True, has_sprite=True)
+        obj.animation.face = go.animation.face
+        obj.animation.passive = True # will update even when still
+        obj.animation.update_rate = self.duration / (2.5) # 3 frames
+        count = 0
+        for i in range(0, 3*4, 3):
+            obj.animation.register_indices(count, [i, i+1, i+2])
+            count += 1
+
+playerWeapon1FCT = PlayerWeapon1FCT()
 
 weapons_list.append( soldierWeapon1FCT )
 weapons_list.append( playerWeapon1FCT )
@@ -77,7 +124,7 @@ class StraightLine(AI.Basic):
     #     super().__init__(*args)
 
 
-    def get_action(self):
+    def get_action(self, elapsed_time):
         """ get direction from heading and project velocity in that direction
         """
         direction = self.parent.get_heading_unit_direction()
@@ -115,6 +162,7 @@ class Arrow1FCT(SoldierWeapon1FCT):
         self.mana_cost = 0.0
         self.is_continuous = True
         self.soundFX = "pew1"
+        self.die_on_impact = True
 
         self.__dict__.update(kwargs)
         
@@ -123,6 +171,7 @@ class Arrow1FCT(SoldierWeapon1FCT):
         self.values['artHeight']     = self.h
         self.values['pixelWidth'] = 16 # size of the sprite image, depends on image size, shouldn't change
         self.values['pixelHeight'] = 16 # size of the sprite image, depends on image size, shouldn't change
+        self.values['die_on_impact'] = self.die_on_impact
 
         # reset creator
         self.creator = StraightProjectile
@@ -179,12 +228,22 @@ arrow5FCT = Arrow1FCT(name="Arrow5",
                       w = 0.5, # width of hitbox
                       h = 0.5 # height of hitbox
                       )
+arrow6FCT = Arrow1FCT(name="Arrow6",
+                      cooldown = 0.25,
+                      w = 1.5, # width of hitbox
+                      h = 1.5, # height of hitbox
+                      mana_cost = 20.0,
+                      die_on_impact = False, # will be like a laser beam OF DEATH
+                      power = 999.0,
+                      duration = 5.0,
+                      )
 
 weapons_list.append( arrow1FCT )
 weapons_list.append( arrow2FCT )
 weapons_list.append( arrow3FCT )
 weapons_list.append( arrow4FCT )
 weapons_list.append( arrow5FCT )
+weapons_list.append( arrow6FCT )
 
 class SpreadShot(Arrow1FCT):
     # multi-directional spread shot, centered on target
@@ -249,7 +308,7 @@ weapons_list.append(spreadShotBoss1Phase3)
 class BallOnChain(AI.Basic):
     # circular motion around caster
 
-    def get_action(self):
+    def get_action(self, elapsed_time):
         """ get direction from heading and project velocity in that direction
         """
         pivot_pt = self.parent.go_position() # recall, the parent for the AI is the DamageObj
