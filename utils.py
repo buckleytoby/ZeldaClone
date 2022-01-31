@@ -10,6 +10,13 @@ def get_mouse_pos(units):
     else:
         return np.divide(mouse_pos, pixel_factor)
 
+def daemon_timer(*args, **kwargs):
+    # makes it so the thread will auto-shutdown when sys.exit
+    th = threading.Timer(*args, **kwargs)
+    th.daemon = True
+    th.start()
+    return th
+
 def parse_data(raw_line):
   #print(raw_line)
   raw_line=raw_line.replace('\n', ' ')

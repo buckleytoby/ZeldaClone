@@ -35,7 +35,7 @@ class DamageObj(gameObjects.GameObject):
         self._started = True
 
         # spin up thread
-        thread = Thread(target = self.thread)
+        thread = Thread(target = self.thread, daemon = True)
         thread.start()
 
         # add self to game-objects
@@ -105,12 +105,12 @@ class Attacker(object):
     def attack_cooldowner(self):
         """ spool up a thread """
         self.disabled = True
-        threading.Timer(self.attack_cooldown, self.reset_disabled).start()
+        daemon_timer(self.attack_cooldown, self.reset_disabled)
 
     def invincible_cooldowner(self):
         """ spool up a thread """
         self.invincible = True
-        threading.Timer(self.invincible_cooldown, self.reset_invincible).start()
+        daemon_timer(self.invincible_cooldown, self.reset_invincible)
 
     def reset_invincible(self):
         self.invincible = False

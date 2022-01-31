@@ -109,6 +109,7 @@ class MasterClass(object):
       # save & exit
       global Done
       Done = True # global
+      print("Exit")
 
     if 'interact' in actions:
       # gather gameobjects within reach
@@ -144,6 +145,10 @@ class MasterClass(object):
 
     if 'use_object' in actions:
       pass
+
+  def close_game(self):
+    if debug_mode:
+        self.debugger.finish()
 
 # @profile
 def main():
@@ -181,10 +186,17 @@ def main():
 
     #display screen
     pygame.display.flip()
+    
+  master.close_game()
+
+  # close down pygame, tkinter and then exit
+  pygame.quit()
+  sys.exit()
   
   
 if __name__ == "__main__":
   main()
+  print("Main Thread Done")
   
   
   

@@ -360,7 +360,7 @@ class Portal(GameObject):
   def active_cooldowner(self):
     """ spool up a thread """
     self.active = False
-    threading.Timer(self.active_cooldown, self.reset_active).start()
+    daemon_timer(self.active_cooldown, self.reset_active)
         
   def reset_active(self):
     self.active = True

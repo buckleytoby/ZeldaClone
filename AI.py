@@ -82,7 +82,7 @@ class Basic_Attacker(Follower):
 
         # trigger cool-down
         self.wait = True
-        threading.Timer(self.cooldown, self.reset_wait).start()
+        utils.daemon_timer(self.cooldown, self.reset_wait)
 
     return out, cbs
 
@@ -187,7 +187,7 @@ class Boss1Phase1(Basic):
 
   def toggle_move(self): 
     self.b_move = not self.b_move
-    threading.Timer(self.move_cooldown, self.toggle_move).start()
+    utils.daemon_timer(self.move_cooldown, self.toggle_move)
 
   def get_dv(self):
     if self.b_move: # move right
@@ -206,7 +206,7 @@ class Boss1Phase1(Basic):
 
       # trigger cool-down
       self.wait = True
-      threading.Timer(self.attack_cooldown, self.reset_wait).start()
+      utils.daemon_timer(self.attack_cooldown, self.reset_wait)
 
     return out, cbs
 

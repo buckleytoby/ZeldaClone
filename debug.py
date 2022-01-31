@@ -13,9 +13,9 @@ class Debug():
 
     def mk_tkinter_box(self):
         # make root tkinter box
-        root = tkinter.Tk()
-        root.protocol("WM_DELETE_WINDOW", self.quit_callback)
-        self.main_tk_dialog =  tkinter.Frame(root)
+        self.root = tkinter.Tk()
+        self.root.protocol("WM_DELETE_WINDOW", self.quit_callback)
+        self.main_tk_dialog =  tkinter.Frame(self.root)
         self.main_tk_dialog.pack()
 
         # add checkbox for draw collision box
@@ -23,7 +23,7 @@ class Debug():
             self.master.holder.worldClass.draw_collision_boxes = not self.master.holder.worldClass.draw_collision_boxes
             
         cb1_var = tkinter.IntVar()
-        cb1 = tkinter.Checkbutton(root, command=cmd, text="Draw Collision Boxes", variable=cb1_var)
+        cb1 = tkinter.Checkbutton(self.root, command=cmd, text="Draw Collision Boxes", variable=cb1_var)
         cb1.pack()
 
 
@@ -32,3 +32,6 @@ class Debug():
             self.main_tk_dialog.update()
         except:
             print("dialog error")
+
+    def finish(self):
+        self.root.destroy()
